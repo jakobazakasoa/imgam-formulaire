@@ -198,9 +198,23 @@
 
   <form id="imgam-form" novalidate>
 
-    <!-- Bloc 1 : Identification -->
+    <!-- Bloc 1 : Référence MVola -->
     <div class="card">
-      <div class="card-title">1 — Identification</div>
+      <div class="card-title">1 — Référence MVola</div>
+
+      <div class="info-box" id="mvola-hint">
+        💡 Effectuez d'abord votre paiement MVola, puis copiez la <strong>référence</strong> reçue par SMS (ex : <code>Ref:1234567890</code>).
+      </div>
+
+      <div class="field">
+        <label id="refMvola-label">Référence de paiement MVola <span class="req">*</span></label>
+        <input type="text" name="refMvola" id="refMvola" placeholder="Ex : 1234567890" required/>
+      </div>
+    </div>
+
+    <!-- Bloc 2 : Identification -->
+    <div class="card">
+      <div class="card-title">2 — Identification</div>
 
       <div class="field">
         <label>Date <span class="req">*</span></label>
@@ -214,12 +228,12 @@
 
       <div class="field">
         <label>Numéro d'inscription <span class="req">*</span></label>
-        <input type="text" name="numero" id="numero" placeholder="Ex : IMGAM-2026-001" required/>
+        <input type="text" name="numero" id="numero" placeholder="Ex : 49000 (Licence) ou FM-5000 (Master)" required/>
       </div>
 
       <div class="field">
         <label>Vague <span class="req">*</span></label>
-        <input type="text" name="vague" id="vague" placeholder="Ex : Vague 3" required/>
+        <input type="text" name="vague" id="vague" placeholder="Ex : 370" required/>
       </div>
 
       <div class="field">
@@ -228,9 +242,9 @@
       </div>
     </div>
 
-    <!-- Bloc 2 : Demande -->
+    <!-- Bloc 3 : Nature de la demande -->
     <div class="card">
-      <div class="card-title">2 — Nature de la demande</div>
+      <div class="card-title">3 — Nature de la demande</div>
 
       <div class="field">
         <label>Motifs de demande <span class="req">*</span></label>
@@ -257,20 +271,6 @@
         <select id="matiere3">
           <option value="">— Aucune —</option>
         </select>
-      </div>
-    </div>
-
-    <!-- Bloc 3 : Référence MVola -->
-    <div class="card">
-      <div class="card-title">3 — Référence MVola</div>
-
-      <div class="info-box" id="mvola-hint">
-        💡 Effectuez d'abord votre paiement MVola, puis copiez la <strong>référence</strong> reçue par SMS (ex : <code>Ref:1234567890</code>).
-      </div>
-
-      <div class="field">
-        <label id="refMvola-label">Référence de paiement MVola <span class="req">*</span></label>
-        <input type="text" name="refMvola" id="refMvola" placeholder="Ex : 1234567890" required/>
       </div>
     </div>
 

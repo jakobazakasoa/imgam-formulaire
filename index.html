@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Demande IMGAM</title>
+  <style>
+    :root {
+      --blue-dark : #1f4e79;
+      --blue-mid  : #2e75b6;
+      --blue-light: #dce6f1;
+      --green     : #1a7f5a;
+      --green-bg  : #e8f5f0;
+      --red       : #c0392b;
+      --red-bg    : #fdecea;
+      --gray      : #f4f6f8;
+      --text      : #1a1a2e;
+      --sub       : #555;
+      --radius    : 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--gray);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--blue-dark);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      text-align: center;
+      margin-bottom: 24px;
+      max-width: 620px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .header h1 { color: white; font-size: 22px; letter-spacing: 1px; }
+    .header p  { color: #b0c8e8; font-size: 13px; margin-top: 6px; }
+
+    /* ── Card ── */
+    .card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      max-width: 620px;
+      margin: 0 auto 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.07);
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--blue-dark);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      border-left: 4px solid var(--blue-mid);
+      padding-left: 10px;
+      margin-bottom: 20px;
+    }
+
+    /* ── Fields ── */
+    .field { margin-bottom: 18px; }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--sub);
+      margin-bottom: 6px;
+    }
+    label .req { color: var(--red); margin-left: 2px; }
+
+    input[type="text"],
+    input[type="date"],
+    input[type="email"],
+    select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #d0d7e3;
+      border-radius: 7px;
+      font-size: 14px;
+      color: var(--text);
+      background: white;
+      transition: border-color .2s;
+      appearance: none;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--blue-mid);
+      box-shadow: 0 0 0 3px rgba(46,117,182,.12);
+    }
+
+    /* ── Radio motifs ── */
+    .radio-group { display: flex; gap: 16px; }
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--text);
+      cursor: pointer;
+      padding: 10px 18px;
+      border: 1.5px solid #d0d7e3;
+      border-radius: 7px;
+      transition: all .2s;
+      flex: 1;
+      justify-content: center;
+    }
+    .radio-group input[type="radio"] { display: none; }
+    .radio-group label:has(input:checked) {
+      border-color: var(--blue-mid);
+      background: var(--blue-light);
+      color: var(--blue-dark);
+      font-weight: 700;
+    }
+
+    /* ── Info box ── */
+    .info-box {
+      background: var(--blue-light);
+      border-left: 4px solid var(--blue-mid);
+      border-radius: 7px;
+      padding: 12px 16px;
+      font-size: 12.5px;
+      color: var(--blue-dark);
+      margin-bottom: 18px;
+    }
+
+    /* ── Submit ── */
+    .btn-submit {
+      width: 100%;
+      padding: 15px;
+      background: var(--blue-dark);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: .5px;
+      transition: background .2s, transform .1s;
+    }
+    .btn-submit:hover  { background: var(--blue-mid); }
+    .btn-submit:active { transform: scale(.98); }
+    .btn-submit:disabled { background: #999; cursor: not-allowed; }
+
+    /* ── Messages retour ── */
+    #msg-ok, #msg-err { display: none; border-radius: 9px; padding: 18px 22px; margin: 16px auto; max-width: 620px; font-size: 14px; }
+    #msg-ok  { background: var(--green-bg); border: 1.5px solid var(--green); color: var(--green); }
+    #msg-err { background: var(--red-bg);   border: 1.5px solid var(--red);   color: var(--red);   }
+    #msg-ok  .icon, #msg-err .icon { font-size: 22px; margin-right: 10px; }
+
+    /* ── Spinner ── */
+    .spinner { display:none; text-align:center; padding: 10px; }
+    .spinner::after {
+      content: "";
+      display: inline-block;
+      width: 22px; height: 22px;
+      border: 3px solid #ccc;
+      border-top-color: var(--blue-mid);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Footer ── */
+    .footer { text-align: center; font-size: 11px; color: #aaa; margin-top: 24px; }
+
+    @media (max-width: 480px) {
+      .card { padding: 20px 16px; }
+      .radio-group { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>📚 IMGAM</h1>
+    <p>Formulaire de demande — Tutoriel ou Examen</p>
+  </div>
+
+  <!-- SUCCESS / ERROR messages -->
+  <div id="msg-ok">
+    <span class="icon">✅</span>
+    <strong>Demande envoyée avec succès !</strong><br/>
+    <span id="msg-ok-detail">Votre demande a bien été enregistrée. Vous serez contacté sur WhatsApp après validation du paiement.</span>
+  </div>
+  <div id="msg-err">
+    <span class="icon">❌</span>
+    <strong>Erreur lors de l'envoi.</strong><br/>
+    <span id="msg-err-detail">Veuillez vérifier votre connexion et réessayer.</span>
+  </div>
+
+  <form id="imgam-form" novalidate>
+
+    <!-- Bloc 1 : Identification -->
+    <div class="card">
+      <div class="card-title">1 — Identification</div>
+
+      <div class="field">
+        <label>Date <span class="req">*</span></label>
+        <input type="date" name="date" id="date" required/>
+      </div>
+
+      <div class="field">
+        <label>Numéro WhatsApp <span class="req">*</span></label>
+        <input type="text" name="whatsapp" id="whatsapp" placeholder="Ex : 034 12 345 67" required/>
+      </div>
+
+      <div class="field">
+        <label>Numéro d'inscription <span class="req">*</span></label>
+        <input type="text" name="numero" id="numero" placeholder="Ex : IMGAM-2026-001" required/>
+      </div>
+
+      <div class="field">
+        <label>Vague <span class="req">*</span></label>
+        <input type="text" name="vague" id="vague" placeholder="Ex : Vague 3" required/>
+      </div>
+
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" name="email" id="email" placeholder="exemple@gmail.com"/>
+      </div>
+    </div>
+
+    <!-- Bloc 2 : Demande -->
+    <div class="card">
+      <div class="card-title">2 — Nature de la demande</div>
+
+      <div class="field">
+        <label>Motifs de demande <span class="req">*</span></label>
+        <div class="radio-group">
+          <label><input type="radio" name="motif" value="Tutoriel" required/> 📖 Tutoriel</label>
+          <label><input type="radio" name="motif" value="Examen"/>  📝 Examen</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Matière 1 <span class="req">*</span></label>
+        <select id="matiere1" required>
+          <option value="" disabled selected>— Choisissez une matière —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Matière 2 <span style="color:#888;font-size:11px;font-weight:400">(optionnel)</span></label>
+        <select id="matiere2">
+          <option value="">— Aucune —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Matière 3 <span style="color:#888;font-size:11px;font-weight:400">(optionnel)</span></label>
+        <select id="matiere3">
+          <option value="">— Aucune —</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Bloc 3 : Référence MVola -->
+    <div class="card">
+      <div class="card-title">3 — Référence MVola</div>
+
+      <div class="info-box" id="mvola-hint">
+        💡 Effectuez d'abord votre paiement MVola, puis copiez la <strong>référence</strong> reçue par SMS (ex : <code>Ref:1234567890</code>).
+      </div>
+
+      <div class="field">
+        <label id="refMvola-label">Référence de paiement MVola <span class="req">*</span></label>
+        <input type="text" name="refMvola" id="refMvola" placeholder="Ex : 1234567890" required/>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div style="max-width:620px;margin:0 auto;">
+      <button type="submit" class="btn-submit" id="btn-submit">
+        📤 Envoyer ma demande
+      </button>
+      <div class="spinner" id="spinner"></div>
+    </div>
+
+  </form>
+
+  <p class="footer">IMGAM © 2026 — Jakoba</p>
+
+  <script>
+    // ── À MODIFIER : collez ici votre URL Apps Script Web App ──
+    var WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzpo7uFh2rDBIjbieXlBSAJwB-jTKr05mSLlYkl4KM2Sip1hkJaCDb5T5l65T22RbP8PQ/exec";
+    // ───────────────────────────────────────────────────────────
+
+    // ── Liste des matières (partagée entre les 3 selects) ──────
+    var MATIERES = [
+      "Informatique de base",
+      "Ciel comptabilité niveau 1",
+      "Ciel comptabilité niveau 2",
+      "Sage comptabilité niveau 1",
+      "Sage comptabilité niveau 2",
+      "Gestion de base des données",
+      "Sage gestion commerciale 1",
+      "Sage gestion commerciale 2",
+      "Progiciel de gestion intégré (PGI/ERP)",
+      "Outils de communication",
+      "Gestion de site web",
+      "Publication Assistée par Ordinateur (PAO)",
+      "Html et Css",
+      "Système de Gestion de Base des Données Relationnelles (SGBDR)"
+    ];
+
+    // Peupler les 3 selects
+    ["matiere1","matiere2","matiere3"].forEach(function(id, idx) {
+      var sel = document.getElementById(id);
+      MATIERES.forEach(function(m) {
+        var opt = document.createElement("option");
+        opt.value = m; opt.textContent = m;
+        sel.appendChild(opt);
+      });
+    });
+
+    // Pré-remplir la date du jour
+    document.getElementById("date").valueAsDate = new Date();
+
+    // ── Mise à jour du hint MVola selon le motif ──────────────
+    function updateMvolaHint() {
+      var motif = document.querySelector('input[name="motif"]:checked');
+      var hint  = document.getElementById("mvola-hint");
+      var label = document.getElementById("refMvola-label");
+      if (motif && motif.value === "Examen") {
+        hint.innerHTML  = "📝 Entrez la <strong>référence MVola</strong> que vous avez utilisée lors du paiement de votre tutoriel pour cette matière.";
+        label.innerHTML = "Référence MVola du tutoriel payé <span class=\"req\">*</span>";
+      } else {
+        hint.innerHTML  = "💡 Effectuez d'abord votre paiement MVola, puis copiez la <strong>référence</strong> reçue par SMS (ex : <code>Ref:1234567890</code>).";
+        label.innerHTML = "Référence de paiement MVola <span class=\"req\">*</span>";
+      }
+    }
+    document.querySelectorAll('input[name="motif"]').forEach(function(r) {
+      r.addEventListener("change", updateMvolaHint);
+    });
+
+    document.getElementById("imgam-form").addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      // Validation motif
+      var motifChecked = document.querySelector('input[name="motif"]:checked');
+      if (!motifChecked) {
+        showError("Veuillez choisir un motif : Tutoriel ou Examen.");
+        return;
+      }
+
+      // Collecter les matières sélectionnées (au moins 1 obligatoire)
+      var matieres = [
+        document.getElementById("matiere1").value,
+        document.getElementById("matiere2").value,
+        document.getElementById("matiere3").value
+      ].filter(function(m) { return m !== ""; });
+
+      if (matieres.length === 0) {
+        showError("Veuillez choisir au moins une matière.");
+        return;
+      }
+
+      // Vérifier doublons
+      var unique = matieres.filter(function(m, i) { return matieres.indexOf(m) === i; });
+      if (unique.length !== matieres.length) {
+        showError("Vous avez sélectionné la même matière deux fois.");
+        return;
+      }
+
+      var data = {
+        type     : "formulaire",
+        date     : document.getElementById("date").value,
+        whatsapp : document.getElementById("whatsapp").value.trim(),
+        motif    : motifChecked.value,
+        matieres : matieres,
+        numero   : document.getElementById("numero").value.trim(),
+        vague    : document.getElementById("vague").value.trim(),
+        refMvola : document.getElementById("refMvola").value.trim(),
+        email    : document.getElementById("email").value.trim()
+      };
+
+      // Vérifier champs obligatoires
+      if (!data.date || !data.whatsapp || !data.numero || !data.vague || !data.refMvola) {
+        showError("Veuillez remplir tous les champs obligatoires (*).");
+        return;
+      }
+
+      setLoading(true);
+      hideMessages();
+
+      fetch(WEB_APP_URL, {
+        method : "POST",
+        headers: { "Content-Type": "text/plain" },
+        body   : JSON.stringify(data)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        setLoading(false);
+        if (res.status === "ok") {
+          showSuccess(res.message || "Demande enregistrée !");
+          document.getElementById("imgam-form").reset();
+          document.getElementById("date").valueAsDate = new Date();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          showError(res.message || "Erreur serveur.");
+        }
+      })
+      .catch(function(err) {
+        setLoading(false);
+        showError("Impossible de contacter le serveur. Vérifiez votre connexion.");
+      });
+    });
+
+    function setLoading(on) {
+      document.getElementById("btn-submit").disabled = on;
+      document.getElementById("spinner").style.display = on ? "block" : "none";
+      document.getElementById("btn-submit").textContent = on ? "Envoi en cours..." : "📤 Envoyer ma demande";
+    }
+
+    function showSuccess(msg) {
+      document.getElementById("msg-ok-detail").textContent = msg;
+      document.getElementById("msg-ok").style.display = "flex";
+      document.getElementById("msg-ok").style.alignItems = "center";
+    }
+
+    function showError(msg) {
+      document.getElementById("msg-err-detail").textContent = msg;
+      document.getElementById("msg-err").style.display = "flex";
+      document.getElementById("msg-err").style.alignItems = "center";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function hideMessages() {
+      document.getElementById("msg-ok").style.display  = "none";
+      document.getElementById("msg-err").style.display = "none";
+    }
+  </script>
+</body>
+</html>

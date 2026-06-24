@@ -23,26 +23,21 @@
 <body class="bg-slate-50 font-sans text-slate-800 antialiased min-h-screen flex items-center justify-center p-4">
 
     <div class="bg-white shadow-xl rounded-2xl max-w-2xl w-full p-6 md:p-8 border border-slate-100 my-8" id="main-container">
-        <!-- En-tête -->
         <div class="text-center mb-8 border-b border-slate-100 pb-6">
             <h1 class="text-2xl md:text-3xl font-bold text-sky-900">🎓 Portail Étudiant IMGAM</h1>
             <p class="text-slate-500 mt-2 text-sm md:text-base">Commandez vos accès Tutoriels ou Sujets d'Examens</p>
             <div id="vague-badge" class="inline-block bg-sky-100 text-sky-800 text-xs font-semibold px-3 py-1 rounded-full mt-3">
-                ⏳ Chargement de la session...
+                ⏳ Chargement...
             </div>
-            <div id="dates-info" class="mt-4 text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 hidden">
-                <!-- Rempli par JavaScript -->
-            </div>
+            <div id="dates-info" class="mt-4 text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 hidden"></div>
         </div>
 
-        <!-- Formulaire -->
         <form id="form-imgam" class="space-y-6">
-            
-            <!-- Type de Demande -->
+            <!-- Motif -->
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Quel est l'objet de votre demande ?</label>
                 <div class="grid grid-cols-2 gap-4">
-                    <label class="flex items-center justify-center p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200 peer-checked:border-sky-500 has-[:checked]:border-sky-600 has-[:checked]:bg-sky-50">
+                    <label class="flex items-center justify-center p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200 has-[:checked]:border-sky-600 has-[:checked]:bg-sky-50">
                         <input type="radio" name="motif" value="Tutoriel" checked class="accent-sky-600 mr-2 motif-radio">
                         <span class="font-medium text-sm text-slate-800">📖 Liens Tutoriels</span>
                     </label>
@@ -53,25 +48,21 @@
                 </div>
             </div>
 
-            <!-- Informations Personnelles -->
+            <!-- Coordonnées -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="numero" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">N° Matricule</label>
-                    <input type="text" id="numero" name="numero" required placeholder="Ex: IMGAM-2026-XYZ" 
-                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
+                    <input type="text" id="numero" name="numero" required placeholder="Ex: IMGAM-2026-XYZ" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
                 </div>
                 <div>
                     <label for="whatsapp" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">N° WhatsApp</label>
-                    <input type="tel" id="whatsapp" name="whatsapp" required placeholder="Ex: 0341694839" 
-                           class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
+                    <input type="tel" id="whatsapp" name="whatsapp" required placeholder="Ex: 0341694839" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
                 </div>
             </div>
 
-            <!-- Email -->
             <div>
                 <label for="email" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Adresse E-mail (Obligatoire)</label>
-                <input type="email" id="email" name="email" required placeholder="nom@exemple.com" 
-                       class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
+                <input type="email" id="email" name="email" required placeholder="nom@exemple.com" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
             </div>
 
             <!-- Matières -->
@@ -81,96 +72,51 @@
                     <span id="counter" class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">0 / 3</span>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-3 border border-slate-200 rounded-xl bg-slate-50/50">
-                    <!-- Cases à cocher - identiques -->
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="informatique de base" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>Informatique de base</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="ciel comptabilité niveau 1" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>Ciel Comptabilité N1</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="ciel comptabilité niveau 2" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>Ciel Comptabilité N2</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="sage comptabilité niveau 1" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>Sage Comptabilité N1</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="sage comptabilité niveau 2" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>Sage Comptabilité N2</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="sage gestion commerciale 1" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>Sage Gestion Commerciale 1</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="sage gestion commerciale 2" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>Sage Gestion Commerciale 2</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="gestion de base des données" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>Gestion de base de données</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="progiciel de gestion intégré" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>Progiciel de gestion intégré (PGI)</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="outils de communication" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>Outils de communication</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="gestion de site web" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>Gestion de site Web (GSW)</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="publication assistée par ordinateur" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>Publication Assistée par Ordinateur</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="html et css" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>HTML et CSS</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="système de gestion de base des données relationnelles" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>SGBDR</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="matieres" value="ia et la prise de décision" class="matiere-checkbox rounded border-slate-300 accent-sky-600">
-                        <span>IA et la prise de décision</span>
-                    </label>
+                    <!-- Mêmes cases à cocher (15 matières) -->
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="informatique de base" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Informatique de base</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="ciel comptabilité niveau 1" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Ciel Comptabilité N1</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="ciel comptabilité niveau 2" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Ciel Comptabilité N2</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="sage comptabilité niveau 1" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Sage Comptabilité N1</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="sage comptabilité niveau 2" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Sage Comptabilité N2</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="sage gestion commerciale 1" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Sage Gestion Commerciale 1</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="sage gestion commerciale 2" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Sage Gestion Commerciale 2</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="gestion de base des données" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Gestion de base de données</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="progiciel de gestion intégré" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Progiciel de gestion intégré (PGI)</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="outils de communication" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Outils de communication</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="gestion de site web" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Gestion de site Web (GSW)</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="publication assistée par ordinateur" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Publication Assistée par Ordinateur</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="html et css" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>HTML et CSS</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="système de gestion de base des données relationnelles" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>SGBDR</span></label>
+                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="ia et la prise de décision" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>IA et la prise de décision</span></label>
                 </div>
             </div>
 
-            <!-- Récapitulatif (visible même avec 0 matière) -->
+            <!-- Récapitulatif (caché en mode Examen) -->
             <div id="recap-container" class="bg-slate-50 p-4 rounded-xl border border-slate-200 hidden">
                 <h4 class="font-bold text-slate-700 mb-2 text-sm">📋 Récapitulatif</h4>
                 <div class="grid grid-cols-2 gap-2 text-sm">
                     <div><span class="text-slate-500">WhatsApp :</span> <span id="recap-whatsapp" class="font-medium">—</span></div>
                     <div><span class="text-slate-500">Email :</span> <span id="recap-email" class="font-medium">—</span></div>
                     <div><span class="text-slate-500">Nb matières :</span> <span id="recap-nb" class="font-medium">0</span></div>
-                    <div><span class="text-slate-500">Montant total :</span> <span id="recap-montant" class="font-medium text-emerald-700">0 Ar</span></div>
+                    <div id="recap-montant-row"><span class="text-slate-500">Montant total :</span> <span id="recap-montant" class="font-medium text-emerald-700">0 Ar</span></div>
                 </div>
                 <div id="recap-ref-status" class="mt-2 text-xs"></div>
             </div>
 
             <!-- Référence MVola -->
             <div>
-                <label for="refMvola" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Référence de Transaction MVola</label>
-                <input type="text" id="refMvola" name="refMvola" required placeholder="Ex: 2370867180" 
-                       class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm font-mono">
+                <label for="refMvola" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    <span id="ref-label">Référence de Transaction MVola</span>
+                </label>
+                <input type="text" id="refMvola" name="refMvola" required placeholder="Ex: 2370867180" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm font-mono">
                 <div id="ref-status" class="mt-2 min-h-[20px] text-[12px]"></div>
             </div>
 
-            <!-- Messages d'alerte -->
+            <!-- Messages -->
             <div id="status-message" class="hidden p-4 rounded-xl text-sm font-medium"></div>
 
             <!-- Bouton -->
-            <button type="submit" id="submit-btn" 
-                    class="w-full bg-sky-900 hover:bg-sky-950 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" id="submit-btn" class="w-full bg-sky-900 hover:bg-sky-950 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                 <span>Envoyer ma demande</span>
             </button>
         </form>
@@ -183,13 +129,12 @@
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwReJffIptwkKou4qK8vaIYoVRIAPR9QH7yENyhtjJE_QCRejAd-8v1ExA_Z8lwdIvmJg/exec";
         const TARIF = 6500;
 
-        // État
         let vagueActive = "Vague 1";
         let configGlobale = null;
         let soldeSuffisant = false;
         let dateDepassee = false;
+        let refValideExamen = false;   // pour examen
 
-        // Éléments DOM
         const checkboxes = document.querySelectorAll('.matiere-checkbox');
         const motifRadios = document.querySelectorAll('.motif-radio');
         const counter = document.getElementById('counter');
@@ -200,6 +145,7 @@
         const datesInfo = document.getElementById('dates-info');
         const refInput = document.getElementById('refMvola');
         const refStatus = document.getElementById('ref-status');
+        const refLabel = document.getElementById('ref-label');
         const mainContainer = document.getElementById('main-container');
 
         const recapContainer = document.getElementById('recap-container');
@@ -207,13 +153,14 @@
         const recapEmail = document.getElementById('recap-email');
         const recapNb = document.getElementById('recap-nb');
         const recapMontant = document.getElementById('recap-montant');
+        const recapMontantRow = document.getElementById('recap-montant-row');
         const recapRefStatus = document.getElementById('recap-ref-status');
 
         // ============================================================
         // FONCTIONS D'ÉTAT DU BOUTON
         // ============================================================
         function mettreAJourBouton() {
-            // Vérifier la date
+            // Date dépassée ?
             dateDepassee = false;
             if (configGlobale) {
                 const motifChoisi = document.querySelector('.motif-radio:checked').value;
@@ -222,9 +169,7 @@
                 if (dateFinStr) {
                     const dateFin = new Date(dateFinStr);
                     dateFin.setHours(23, 59, 59, 999);
-                    if (maintenant > dateFin) {
-                        dateDepassee = true;
-                    }
+                    if (maintenant > dateFin) dateDepassee = true;
                 }
             }
 
@@ -233,29 +178,39 @@
                 submitBtn.classList.add('bg-slate-400', 'cursor-not-allowed', 'text-slate-100');
                 submitBtn.classList.remove('bg-sky-900', 'hover:bg-sky-950');
                 showStatus("❌ La date limite pour cette période est dépassée.", "error");
-                console.log("Bouton désactivé : date dépassée");
                 return;
             }
 
+            const motif = document.querySelector('.motif-radio:checked').value;
             const ref = refInput.value.trim();
-            if (ref.length >= 6 && !soldeSuffisant) {
-                submitBtn.disabled = true;
-                submitBtn.classList.add('bg-slate-400', 'cursor-not-allowed', 'text-slate-100');
-                submitBtn.classList.remove('bg-sky-900', 'hover:bg-sky-950');
-                console.log("Bouton désactivé : solde insuffisant");
-                return;
+
+            if (motif === "Tutoriel") {
+                // Tutoriel : besoin solde suffisant
+                if (ref.length >= 6 && !soldeSuffisant) {
+                    submitBtn.disabled = true;
+                    submitBtn.classList.add('bg-slate-400', 'cursor-not-allowed', 'text-slate-100');
+                    submitBtn.classList.remove('bg-sky-900', 'hover:bg-sky-950');
+                    return;
+                }
+            } else if (motif === "Examen") {
+                // Examen : besoin référence tutoriel valide
+                if (ref.length >= 6 && !refValideExamen) {
+                    submitBtn.disabled = true;
+                    submitBtn.classList.add('bg-slate-400', 'cursor-not-allowed', 'text-slate-100');
+                    submitBtn.classList.remove('bg-sky-900', 'hover:bg-sky-950');
+                    return;
+                }
             }
 
-            // Activer
+            // Sinon activer
             submitBtn.disabled = false;
             submitBtn.classList.add('bg-sky-900', 'hover:bg-sky-950');
             submitBtn.classList.remove('bg-slate-400', 'cursor-not-allowed', 'text-slate-100');
             hideStatus();
-            console.log("Bouton activé");
         }
 
         // ============================================================
-        // RÉCAPITULATIF (affiché si au moins un champ important est rempli)
+        // RÉCAPITULATIF (adapté au mode)
         // ============================================================
         function updateRecap() {
             const checkedBoxes = document.querySelectorAll('.matiere-checkbox:checked');
@@ -269,18 +224,26 @@
             recapWhatsapp.textContent = whatsapp || '—';
             recapEmail.textContent = email || '—';
 
-            // Afficher le récapitulatif dès qu'il y a au moins une matière OU un contact
+            // Cacher le montant en mode Examen
+            const motif = document.querySelector('.motif-radio:checked').value;
+            if (motif === "Examen") {
+                recapMontantRow.style.display = 'none';
+                recapMontant.textContent = 'Gratuit';
+            } else {
+                recapMontantRow.style.display = 'block';
+            }
+
             if (nb > 0 || whatsapp || email) {
                 recapContainer.classList.remove('hidden');
             } else {
                 recapContainer.classList.add('hidden');
             }
-            // Mettre à jour le statut du bouton
+
             verifierRefEnTempsReel();
         }
 
         // ============================================================
-        // GESTION DES CHECKBOXES (limite 3)
+        // GESTION DES CHECKBOXES
         // ============================================================
         checkboxes.forEach(box => {
             box.addEventListener('change', () => {
@@ -295,14 +258,11 @@
             });
         });
 
-        // ============================================================
-        // ÉCOUTEURS SUR WHATSAPP ET EMAIL
-        // ============================================================
         document.getElementById('whatsapp').addEventListener('input', updateRecap);
         document.getElementById('email').addEventListener('input', updateRecap);
 
         // ============================================================
-        // GRILLER L'OPTION EXAMEN AVANT LE 14/07/2026
+        // GRILLER EXAMEN AVANT 14/07/2026
         // ============================================================
         function gererOptionExamen() {
             const today = new Date();
@@ -322,7 +282,7 @@
         }
 
         // ============================================================
-        // CHARGEMENT DE LA CONFIGURATION
+        // CHARGEMENT CONFIG
         // ============================================================
         window.addEventListener('DOMContentLoaded', () => {
             gererOptionExamen();
@@ -356,7 +316,30 @@
         }
 
         // ============================================================
-        // VÉRIFICATION DE LA RÉFÉRENCE MVola EN TEMPS RÉEL
+        // CHANGEMENT DE MOTIF
+        // ============================================================
+        motifRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                const motif = radio.value;
+                if (motif === "Examen") {
+                    refLabel.textContent = "Référence de paiement Tutoriel (ex: 2370867180)";
+                    // Réinitialiser l'état
+                    refValideExamen = false;
+                    soldeSuffisant = false;
+                    // Effacer le statut
+                    refStatus.innerHTML = "";
+                    recapRefStatus.innerHTML = "";
+                } else {
+                    refLabel.textContent = "Référence de Transaction MVola";
+                }
+                updateRecap();
+                mettreAJourBouton();
+                verifierRefEnTempsReel();
+            });
+        });
+
+        // ============================================================
+        // VÉRIFICATION DE LA RÉFÉRENCE
         // ============================================================
         let timeoutValidation;
 
@@ -368,74 +351,92 @@
                 refStatus.innerHTML = "";
                 recapRefStatus.innerHTML = "";
                 soldeSuffisant = false;
+                refValideExamen = false;
                 mettreAJourBouton();
                 return;
             }
 
-            refStatus.innerHTML = `<span class="text-sky-600">⏳ Vérification...</span>`;
-            recapRefStatus.innerHTML = '';
+            const motif = document.querySelector('.motif-radio:checked').value;
 
-            timeoutValidation = setTimeout(() => {
-                fetch(`${WEB_APP_URL}?action=verifierRef&ref=${ref}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        console.log("Réponse de verifierRef :", data);
-                        const nbMatieresChoisies = document.querySelectorAll('.matiere-checkbox:checked').length;
-                        const totalMatieres = (data.nbMatieres || 0) + nbMatieresChoisies;
-                        const montantRequis = totalMatieres * TARIF;
-                        const montantDispo = data.montant || 0;
+            if (motif === "Tutoriel") {
+                // Appel classique verifierRef
+                refStatus.innerHTML = `<span class="text-sky-600">⏳ Vérification...</span>`;
+                recapRefStatus.innerHTML = '';
+                timeoutValidation = setTimeout(() => {
+                    fetch(`${WEB_APP_URL}?action=verifierRef&ref=${ref}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            const nbMatieresChoisies = document.querySelectorAll('.matiere-checkbox:checked').length;
+                            const totalMatieres = (data.nbMatieres || 0) + nbMatieresChoisies;
+                            const montantRequis = totalMatieres * TARIF;
+                            const montantDispo = data.montant || 0;
 
-                        let msg = '';
-                        let ok = false;
+                            let msg = '', ok = false;
+                            if (data.dejaUtilisee) {
+                                msg = `❌ Cette référence a déjà été utilisée pour ${data.nbMatieres} matière(s).`;
+                            } else if (data.montant === 0) {
+                                msg = `❌ Référence introuvable. Vérifiez votre saisie.`;
+                            } else if (montantDispo < montantRequis) {
+                                msg = `⚠️ Solde insuffisant (${montantDispo} Ar) pour ${totalMatieres} matière(s) (requis ${montantRequis} Ar).`;
+                            } else {
+                                msg = `✅ Référence valide (${montantDispo} Ar) — suffisant pour ${totalMatieres} matière(s).`;
+                                ok = true;
+                            }
+                            refStatus.innerHTML = `<span class="${ok ? 'text-emerald-600' : 'text-red-600'} font-bold">${msg}</span>`;
+                            recapRefStatus.innerHTML = `<span class="${ok ? 'text-emerald-600' : 'text-red-600'}">${msg}</span>`;
+                            soldeSuffisant = ok;
+                            refValideExamen = false;
+                            mettreAJourBouton();
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            refStatus.innerHTML = `<span class="text-orange-500">⚠️ Erreur de vérification.</span>`;
+                            recapRefStatus.innerHTML = '';
+                            soldeSuffisant = false;
+                            mettreAJourBouton();
+                        });
+                }, 800);
 
-                        if (data.dejaUtilisee) {
-                            msg = `❌ Cette référence a déjà été utilisée pour ${data.nbMatieres} matière(s).`;
-                        } else if (data.montant === 0) {
-                            msg = `❌ Référence introuvable. Vérifiez votre saisie.`;
-                        } else if (montantDispo < montantRequis) {
-                            msg = `⚠️ Solde insuffisant (${montantDispo} Ar) pour ${totalMatieres} matière(s) (requis ${montantRequis} Ar).`;
-                        } else {
-                            msg = `✅ Référence valide (${montantDispo} Ar) — suffisant pour ${totalMatieres} matière(s).`;
-                            ok = true;
-                        }
-
-                        refStatus.innerHTML = `<span class="${ok ? 'text-emerald-600' : 'text-red-600'} font-bold">${msg}</span>`;
-                        recapRefStatus.innerHTML = `<span class="${ok ? 'text-emerald-600' : 'text-red-600'}">${msg}</span>`;
-
-                        soldeSuffisant = ok;
-                        console.log("soldeSuffisant =", soldeSuffisant);
-                        mettreAJourBouton();
-                    })
-                    .catch(err => {
-                        console.error("Erreur lors de la vérification :", err);
-                        refStatus.innerHTML = `<span class="text-orange-500">⚠️ Impossible de vérifier la référence.</span>`;
-                        recapRefStatus.innerHTML = '';
-                        soldeSuffisant = false;
-                        mettreAJourBouton();
-                    });
-            }, 800);
+            } else if (motif === "Examen") {
+                // Appel verifierRefExamen
+                refStatus.innerHTML = `<span class="text-sky-600">⏳ Vérification référence tutoriel...</span>`;
+                recapRefStatus.innerHTML = '';
+                timeoutValidation = setTimeout(() => {
+                    fetch(`${WEB_APP_URL}?action=verifierRefExamen&ref=${ref}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            let msg = '', ok = false;
+                            if (data.valide) {
+                                msg = `✅ ${data.message}`;
+                                ok = true;
+                            } else {
+                                msg = `❌ ${data.message}`;
+                            }
+                            refStatus.innerHTML = `<span class="${ok ? 'text-emerald-600' : 'text-red-600'} font-bold">${msg}</span>`;
+                            recapRefStatus.innerHTML = `<span class="${ok ? 'text-emerald-600' : 'text-red-600'}">${msg}</span>`;
+                            refValideExamen = ok;
+                            soldeSuffisant = false;
+                            mettreAJourBouton();
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            refStatus.innerHTML = `<span class="text-orange-500">⚠️ Erreur de vérification.</span>`;
+                            recapRefStatus.innerHTML = '';
+                            refValideExamen = false;
+                            mettreAJourBouton();
+                        });
+                }, 800);
+            }
         }
 
         refInput.addEventListener('input', verifierRefEnTempsReel);
 
         // ============================================================
-        // ÉCOUTEUR SUR LE CHANGEMENT DE MOTIF
-        // ============================================================
-        motifRadios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                mettreAJourBouton();
-                updateRecap();
-                verifierRefEnTempsReel();
-            });
-        });
-
-        // ============================================================
-        // SOUMISSION DU FORMULAIRE (sans lecture de réponse CORS)
+        // SOUMISSION
         // ============================================================
         form.addEventListener('submit', function(e) {
             e.preventDefault();
 
-            // Vérifier si le bouton est désactivé
             if (submitBtn.disabled) {
                 showStatus("❌ Votre demande ne peut pas être soumise pour le moment.", "error");
                 return;
@@ -447,33 +448,31 @@
                 return;
             }
 
-            // Désactiver le bouton et afficher le loader
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<div class="loader ease-linear rounded-full border-2 border-t-2 border-slate-200 h-4 w-4 mr-2"></div> <span>Traitement en cours...</span>`;
             hideStatus();
 
-            const matieresSelectionnees = Array.from(checkedBoxes).map(cb => cb.value);
-            const motifSelectionne = form.elements['motif'].value;
-            const numMatricule = document.getElementById('numero').value.trim();
-            const refPaiement = document.getElementById('refMvola').value.trim();
+            const matieres = Array.from(checkedBoxes).map(cb => cb.value);
+            const motif = form.elements['motif'].value;
+            const numero = document.getElementById('numero').value.trim();
             const whatsapp = document.getElementById('whatsapp').value.trim();
             const email = document.getElementById('email').value.trim();
+            const ref = document.getElementById('refMvola').value.trim();
 
             const formData = {
                 type: "formulaire",
-                motif: motifSelectionne,
-                numero: numMatricule,
+                motif: motif,
+                numero: numero,
                 whatsapp: whatsapp,
                 email: email,
-                refMvola: refPaiement,
+                refMvola: ref,
                 vague: vagueActive,
                 date: new Date().toLocaleDateString('fr-FR'),
-                matieres: matieresSelectionnees
+                matieres: matieres
             };
 
             console.log("Données envoyées :", formData);
 
-            // Envoi avec mode no-cors (ne lit pas la réponse)
             fetch(WEB_APP_URL, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -481,9 +480,30 @@
                 body: JSON.stringify(formData)
             })
             .then(() => {
-                // Succès (on suppose, car no-cors ne permet pas de lire la réponse)
-                console.log("Requête envoyée (mode no-cors)");
-                afficherConfirmation(formData, matieresSelectionnees);
+                // Affichage de confirmation
+                mainContainer.innerHTML = `
+                    <div class="text-center py-6 px-4">
+                        <div class="text-5xl mb-4">🎉</div>
+                        <h2 class="text-2xl font-bold text-emerald-700 mb-2">Demande bien exécutée !</h2>
+                        <p class="text-slate-600 mb-6">Vos accès vous seront envoyés sur WhatsApp et par e-mail dans quelques instants.</p>
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 text-left text-sm space-y-3 shadow-sm mb-6">
+                            <h3 class="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">Récapitulatif</h3>
+                            <p><span class="text-slate-500 w-24 inline-block">Matricule :</span> <strong class="text-slate-800">${numero}</strong></p>
+                            <p><span class="text-slate-500 w-24 inline-block">Type :</span> <strong class="text-slate-800">${motif}</strong></p>
+                            <p><span class="text-slate-500 w-24 inline-block">Référence :</span> <strong class="text-slate-800 font-mono">${ref}</strong></p>
+                            <p><span class="text-slate-500 w-24 inline-block">WhatsApp :</span> <strong class="text-slate-800">${whatsapp}</strong></p>
+                            <p><span class="text-slate-500 w-24 inline-block">Email :</span> <strong class="text-slate-800">${email}</strong></p>
+                            <div>
+                                <span class="text-slate-500 w-24 inline-block align-top">Matières :</span> 
+                                <ul class="inline-block list-disc pl-5 font-semibold text-sky-800">
+                                    ${matieres.map(m => `<li class="capitalize">${m}</li>`).join('')}
+                                </ul>
+                            </div>
+                            <p><span class="text-slate-500 w-24 inline-block">Montant payé :</span> <strong class="text-emerald-700">${motif === 'Tutoriel' ? matieres.length * TARIF + ' Ar' : 'Gratuit'}</strong></p>
+                        </div>
+                        <button onclick="location.reload()" class="bg-sky-900 hover:bg-sky-950 text-white font-semibold py-3 px-6 rounded-xl shadow transition">Faire une nouvelle demande</button>
+                    </div>
+                `;
             })
             .catch(error => {
                 console.error('Erreur fetch :', error);
@@ -493,40 +513,6 @@
             });
         });
 
-        // ============================================================
-        // AFFICHAGE DE CONFIRMATION (remplace le contenu)
-        // ============================================================
-        function afficherConfirmation(formData, matieres) {
-            mainContainer.innerHTML = `
-                <div class="text-center py-6 px-4">
-                    <div class="text-5xl mb-4">🎉</div>
-                    <h2 class="text-2xl font-bold text-emerald-700 mb-2">Demande bien exécutée !</h2>
-                    <p class="text-slate-600 mb-6">Vos accès vous seront envoyés sur WhatsApp et par e-mail dans quelques instants.</p>
-                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 text-left text-sm space-y-3 shadow-sm mb-6">
-                        <h3 class="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">Récapitulatif de votre demande :</h3>
-                        <p><span class="text-slate-500 w-24 inline-block">Matricule :</span> <strong class="text-slate-800">${formData.numero}</strong></p>
-                        <p><span class="text-slate-500 w-24 inline-block">Type :</span> <strong class="text-slate-800">${formData.motif}</strong></p>
-                        <p><span class="text-slate-500 w-24 inline-block">Référence :</span> <strong class="text-slate-800 font-mono">${formData.refMvola}</strong></p>
-                        <p><span class="text-slate-500 w-24 inline-block">WhatsApp :</span> <strong class="text-slate-800">${formData.whatsapp}</strong></p>
-                        <p><span class="text-slate-500 w-24 inline-block">Email :</span> <strong class="text-slate-800">${formData.email}</strong></p>
-                        <div>
-                            <span class="text-slate-500 w-24 inline-block align-top">Matières :</span> 
-                            <ul class="inline-block list-disc pl-5 font-semibold text-sky-800">
-                                ${matieres.map(m => `<li class="capitalize">${m}</li>`).join('')}
-                            </ul>
-                        </div>
-                        <p><span class="text-slate-500 w-24 inline-block">Montant payé :</span> <strong class="text-emerald-700">${matieres.length * TARIF} Ar</strong></p>
-                    </div>
-                    <button onclick="location.reload()" class="bg-sky-900 hover:bg-sky-950 text-white font-semibold py-3 px-6 rounded-xl shadow transition">
-                        Faire une nouvelle demande
-                    </button>
-                </div>
-            `;
-        }
-
-        // ============================================================
-        // FONCTIONS D'AFFICHAGE DES MESSAGES
-        // ============================================================
         function showStatus(msg, type) {
             statusMessage.innerText = msg;
             statusMessage.className = `p-4 rounded-xl text-sm font-medium mt-4 ${type === 'error' ? 'bg-red-50 text-red-800' : 'bg-emerald-50 text-emerald-800'}`;

@@ -1,527 +1,258 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inscription & Demandes — IMGAM v11</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <style>
-        .loader {
-            border-top-color: #3498db;
-            animation: spinner 1.5s linear infinite;
-        }
-        @keyframes spinner {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .disabled-option {
-            opacity: 0.5;
-            pointer-events: none;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IMGAM — Commandes</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    .loader { border-top-color: #3498db; animation: spinner 1.5s linear infinite; }
+    @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .step-indicator { display: flex; justify-content: space-between; margin-bottom: 24px; position: relative; }
+    .step-indicator::before { content: ''; position: absolute; top: 16px; left: 10%; right: 10%; height: 2px; background: #e2e8f0; z-index: 0; }
+    .step-dot { display: flex; flex-direction: column; align-items: center; z-index: 1; flex: 1; }
+    .step-dot .circle { width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0; color: #64748b; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; transition: all 0.3s; border: 2px solid transparent; }
+    .step-dot.active .circle { background: #0f1a2e; color: white; border-color: #0f1a2e; }
+    .step-dot.completed .circle { background: #1a8a5a; color: white; border-color: #1a8a5a; }
+    .step-dot .label { font-size: 10px; margin-top: 4px; color: #64748b; text-align: center; }
+    .step-dot.active .label { color: #0f1a2e; font-weight: 600; }
+    .step-dot.completed .label { color: #1a8a5a; }
+    .step-content { display: none; animation: fadeIn 0.3s ease; }
+    .step-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .payment-info { background: #f8fafc; border-radius: 12px; padding: 16px; border: 1px solid #e2e8f0; }
+    .payment-info .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+    .matiere-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #e2e8f0; }
+    .matiere-item:last-child { border-bottom: none; }
+    .support-link { color: #0f1a2e; text-decoration: underline; font-weight: 600; }
+  </style>
 </head>
-<body class="bg-slate-50 font-sans text-slate-800 antialiased min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-50 p-4 min-h-screen flex items-center justify-center">
+<div class="bg-white shadow-xl rounded-2xl max-w-2xl w-full p-6 md:p-8">
 
-    <div class="bg-white shadow-xl rounded-2xl max-w-2xl w-full p-6 md:p-8 border border-slate-100 my-8" id="main-container">
-        <div class="text-center mb-8 border-b border-slate-100 pb-6">
-            <h1 class="text-2xl md:text-3xl font-bold text-sky-900">🎓 Portail Étudiant IMGAM</h1>
-            <p class="text-slate-500 mt-2 text-sm md:text-base">Commandez vos accès Tutoriels ou Sujets d'Examens</p>
-            <div id="vague-badge" class="inline-block bg-sky-100 text-sky-800 text-xs font-semibold px-3 py-1 rounded-full mt-3">
-                ⏳ Chargement...
-            </div>
-            <div id="dates-info" class="mt-4 text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 hidden"></div>
-        </div>
+  <div class="text-center mb-6">
+    <h1 class="text-2xl font-bold text-sky-900">🎓 Portail IMGAM</h1>
+    <p class="text-slate-500 text-sm">Commande de tutoriels et sujets d'examen</p>
+    <span id="session-badge" class="inline-block mt-2 text-xs font-semibold bg-sky-100 text-sky-800 px-3 py-1 rounded-full" style="display:none;"></span>
+  </div>
 
-        <form id="form-imgam" class="space-y-6">
-            <!-- Motif -->
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Quel est l'objet de votre demande ?</label>
-                <div class="grid grid-cols-2 gap-4">
-                    <label class="flex items-center justify-center p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200 has-[:checked]:border-sky-600 has-[:checked]:bg-sky-50">
-                        <input type="radio" name="motif" value="Tutoriel" checked class="accent-sky-600 mr-2 motif-radio">
-                        <span class="font-medium text-sm text-slate-800">📖 Liens Tutoriels</span>
-                    </label>
-                    <label id="examen-label" class="flex items-center justify-center p-3 border rounded-xl cursor-not-allowed border-slate-200 bg-slate-100 has-[:checked]:border-slate-300">
-                        <input type="radio" name="motif" value="Examen" class="accent-sky-600 mr-2 motif-radio" disabled>
-                        <span class="font-medium text-sm text-slate-500">📝 Sujet d'Examen (à partir du 14/07/2026)</span>
-                    </label>
-                </div>
-            </div>
+  <!-- Indicateur d'étapes -->
+  <div class="step-indicator">
+    <div class="step-dot active" data-step="1"><div class="circle">1</div><span class="label">Matières</span></div>
+    <div class="step-dot" data-step="2"><div class="circle">2</div><span class="label">Paiement</span></div>
+    <div class="step-dot" data-step="3"><div class="circle">3</div><span class="label">Référence</span></div>
+    <div class="step-dot" data-step="4"><div class="circle">4</div><span class="label">Confirmation</span></div>
+  </div>
 
-            <!-- Coordonnées -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="numero" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">N° Matricule</label>
-                    <input type="text" id="numero" name="numero" required placeholder="Ex: IMGAM-2026-XYZ" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
-                </div>
-                <div>
-                    <label for="whatsapp" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">N° WhatsApp</label>
-                    <input type="tel" id="whatsapp" name="whatsapp" required placeholder="Ex: 0341694839" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
-                </div>
-            </div>
-
-            <div>
-                <label for="email" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Adresse E-mail (Obligatoire)</label>
-                <input type="email" id="email" name="email" required placeholder="nom@exemple.com" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
-            </div>
-
-            <!-- Matières -->
-            <div>
-                <div class="flex justify-between items-center mb-2">
-                    <label class="block text-sm font-semibold text-slate-700">Sélectionnez vos matières (1 à 3 max)</label>
-                    <span id="counter" class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">0 / 3</span>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-3 border border-slate-200 rounded-xl bg-slate-50/50">
-                    <!-- Mêmes cases à cocher (15 matières) -->
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="informatique de base" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Informatique de base</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="ciel comptabilité niveau 1" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Ciel Comptabilité N1</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="ciel comptabilité niveau 2" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Ciel Comptabilité N2</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="sage comptabilité niveau 1" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Sage Comptabilité N1</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="sage comptabilité niveau 2" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Sage Comptabilité N2</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="sage gestion commerciale 1" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Sage Gestion Commerciale 1</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="sage gestion commerciale 2" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Sage Gestion Commerciale 2</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="gestion de base des données" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Gestion de base de données</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="progiciel de gestion intégré" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Progiciel de gestion intégré (PGI)</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="outils de communication" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Outils de communication</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="gestion de site web" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Gestion de site Web (GSW)</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="publication assistée par ordinateur" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>Publication Assistée par Ordinateur</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="html et css" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>HTML et CSS</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="système de gestion de base des données relationnelles" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>SGBDR</span></label>
-                    <label class="flex items-center space-x-2 text-sm p-2 bg-white rounded-lg border border-slate-100 shadow-xs cursor-pointer hover:bg-slate-50"><input type="checkbox" name="matieres" value="ia et la prise de décision" class="matiere-checkbox rounded border-slate-300 accent-sky-600"><span>IA et la prise de décision</span></label>
-                </div>
-            </div>
-
-            <!-- Récapitulatif (caché en mode Examen) -->
-            <div id="recap-container" class="bg-slate-50 p-4 rounded-xl border border-slate-200 hidden">
-                <h4 class="font-bold text-slate-700 mb-2 text-sm">📋 Récapitulatif</h4>
-                <div class="grid grid-cols-2 gap-2 text-sm">
-                    <div><span class="text-slate-500">WhatsApp :</span> <span id="recap-whatsapp" class="font-medium">—</span></div>
-                    <div><span class="text-slate-500">Email :</span> <span id="recap-email" class="font-medium">—</span></div>
-                    <div><span class="text-slate-500">Nb matières :</span> <span id="recap-nb" class="font-medium">0</span></div>
-                    <div id="recap-montant-row"><span class="text-slate-500">Montant total :</span> <span id="recap-montant" class="font-medium text-emerald-700">0 Ar</span></div>
-                </div>
-                <div id="recap-ref-status" class="mt-2 text-xs"></div>
-            </div>
-
-            <!-- Référence MVola -->
-            <div>
-                <label for="refMvola" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    <span id="ref-label">Référence de Transaction MVola</span>
-                </label>
-                <input type="text" id="refMvola" name="refMvola" required placeholder="Ex: 2370867180" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm font-mono">
-                <div id="ref-status" class="mt-2 min-h-[20px] text-[12px]"></div>
-            </div>
-
-            <!-- Messages -->
-            <div id="status-message" class="hidden p-4 rounded-xl text-sm font-medium"></div>
-
-            <!-- Bouton -->
-            <button type="submit" id="submit-btn" class="w-full bg-sky-900 hover:bg-sky-950 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                <span>Envoyer ma demande</span>
-            </button>
-        </form>
+  <!-- ÉTAPE 1 -->
+  <div id="step1" class="step-content active">
+    <h2 class="text-xl font-bold text-slate-800 mb-2">📚 Sélectionnez vos matières</h2>
+    <p class="text-sm text-slate-500 mb-4">Choisissez 1 à 3 matières. Tarif : <strong class="text-sky-800">6 500 Ar</strong> par matière.</p>
+    <div class="mb-4">
+      <label class="block text-sm font-semibold text-slate-700">Type de demande</label>
+      <div class="flex gap-4 mt-1">
+        <label class="flex items-center text-sm"><input type="radio" name="typeCommande" value="tutoriel" checked> Tutoriel</label>
+        <label class="flex items-center text-sm"><input type="radio" name="typeCommande" value="examen"> Examen</label>
+      </div>
+      <div id="periode-info" class="mt-2 text-xs rounded-lg px-3 py-2" style="display:none;"></div>
     </div>
+    <div class="mb-4">
+      <div class="flex justify-between items-center"><span class="text-sm font-semibold text-slate-700">Matières disponibles</span><span id="counter" class="text-xs bg-slate-100 px-2 py-1 rounded">0 / 3</span></div>
+      <div id="matieres-container" class="grid grid-cols-2 gap-2 mt-2 max-h-60 overflow-y-auto p-2 border rounded-lg bg-slate-50"><p class="text-sm text-slate-400 col-span-2">Chargement...</p></div>
+    </div>
+    <div class="grid grid-cols-2 gap-3 mt-4">
+      <div><label class="block text-xs font-bold text-slate-600">N° Matricule <span class="text-red-600">*</span></label><input type="text" id="matricule" required placeholder="Ex: 49000 (Pour Licence) ou FM-5000 (Pour Master)" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+      <div><label class="block text-xs font-bold text-slate-600">WhatsApp <span class="text-red-600">*</span></label><input type="tel" id="whatsapp" required placeholder="Ex: 0341694839" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+    </div>
+    <div class="mt-2"><label class="block text-xs font-bold text-slate-600">Email <span class="text-red-600">*</span> <span class="font-normal text-slate-400">(compte Google obligatoire pour l'accès Drive)</span></label><input type="email" id="email" required placeholder="nom@gmail.com" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+    <button id="btn-to-step2" class="w-full bg-sky-900 hover:bg-sky-950 text-white font-semibold py-3 rounded-xl mt-4 transition">Continuer →</button>
+    <div id="status-step1" class="mt-2 text-sm hidden"></div>
+  </div>
 
-    <script>
-        // ============================================================
-        // CONFIGURATION
-        // ============================================================
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwReJffIptwkKou4qK8vaIYoVRIAPR9QH7yENyhtjJE_QCRejAd-8v1ExA_Z8lwdIvmJg/exec";
-        const TARIF = 6500;
+  <!-- ÉTAPE 2 -->
+  <div id="step2" class="step-content">
+    <h2 class="text-xl font-bold text-slate-800 mb-2">💳 Récapitulatif et paiement</h2>
+    <div id="recap-content" class="payment-info mb-4"></div>
+    <div class="payment-info bg-emerald-50 border-emerald-200 mb-4">
+      <h3 class="font-bold text-emerald-800 text-sm mb-2">📲 Informations de paiement MVola</h3>
+      <div class="row"><span>Numéro MVola :</span> <strong class="text-emerald-900">034 16 948 39</strong></div>
+      <div class="row"><span>Bénéficiaire :</span> <strong class="text-emerald-900">IMGAM</strong></div>
+      <div class="row"><span>Tarif :</span> <strong class="text-emerald-900">6 500 Ar / matière</strong></div>
+      <div class="row"><span>Montant exact :</span> <strong class="text-emerald-900" id="montant-exact">0 Ar</strong></div>
+      <div class="row"><span>Délai de traitement :</span> <strong class="text-emerald-900">Moins de 5 minutes</strong></div>
+      <div class="row"><span>Support :</span> <a href="https://wa.me/261341694839" target="_blank" class="support-link">+261 34 169 48 39</a></div>
+    </div>
+    <button id="btn-to-step3" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3 rounded-xl transition">J'ai effectué le paiement →</button>
+    <button class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-xl mt-2 text-sm transition" onclick="goToStep(1)">← Modifier</button>
+  </div>
 
-        let vagueActive = "Vague 1";
-        let configGlobale = null;
-        let soldeSuffisant = false;
-        let dateDepassee = false;
-        let refValideExamen = false;   // pour examen
+  <!-- ÉTAPE 3 -->
+  <div id="step3" class="step-content">
+    <h2 class="text-xl font-bold text-slate-800 mb-2">🔑 Saisissez la référence MVola</h2>
+    <p class="text-sm text-slate-500 mb-4">Entrez la référence reçue par SMS après votre paiement.</p>
+    <div><label class="block text-xs font-bold text-slate-600">Référence MVola</label><input type="text" id="ref-paiement" placeholder="Ex: 2370867180" class="w-full px-4 py-2 border rounded-xl font-mono text-lg"></div>
+    <button id="btn-verifier" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3 rounded-xl mt-4 transition">Vérifier mon paiement</button>
+    <div id="paiement-status" class="mt-3 text-sm"></div>
+    <button class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-xl mt-2 text-sm transition" onclick="goToStep(2)">← Retour</button>
+  </div>
 
-        const checkboxes = document.querySelectorAll('.matiere-checkbox');
-        const motifRadios = document.querySelectorAll('.motif-radio');
-        const counter = document.getElementById('counter');
-        const form = document.getElementById('form-imgam');
-        const submitBtn = document.getElementById('submit-btn');
-        const statusMessage = document.getElementById('status-message');
-        const vagueBadge = document.getElementById('vague-badge');
-        const datesInfo = document.getElementById('dates-info');
-        const refInput = document.getElementById('refMvola');
-        const refStatus = document.getElementById('ref-status');
-        const refLabel = document.getElementById('ref-label');
-        const mainContainer = document.getElementById('main-container');
+  <!-- ÉTAPE 4 -->
+  <div id="step4" class="step-content text-center py-6">
+    <div class="text-6xl mb-4">🎉</div>
+    <h2 class="text-2xl font-bold text-emerald-700">Commande validée !</h2>
+    <p class="text-slate-600 mb-4">Vos accès ont été envoyés par email.</p>
+    <div class="bg-slate-50 p-4 rounded-lg text-left text-sm mb-4"><p><strong>N° de commande :</strong> <span id="final-commande-id" class="font-mono">—</span></p></div>
+    <button onclick="location.reload()" class="bg-sky-900 hover:bg-sky-950 text-white px-6 py-2 rounded-xl transition">Nouvelle commande</button>
+  </div>
 
-        const recapContainer = document.getElementById('recap-container');
-        const recapWhatsapp = document.getElementById('recap-whatsapp');
-        const recapEmail = document.getElementById('recap-email');
-        const recapNb = document.getElementById('recap-nb');
-        const recapMontant = document.getElementById('recap-montant');
-        const recapMontantRow = document.getElementById('recap-montant-row');
-        const recapRefStatus = document.getElementById('recap-ref-status');
+  <!-- Protection des données -->
+  <div class="mt-8 pt-6 border-t border-slate-200 text-xs text-slate-500 space-y-2">
+    <p>📋 <strong>Protection de vos données</strong><br>Les informations fournies sont utilisées uniquement pour vérifier votre demande, transmettre vos accès et assurer le suivi administratif.</p>
+    <p>⏳ <strong>Durée de conservation :</strong> Pendant la durée de la formation, puis archivage légal.</p>
+    <p>📧 <strong>Contact :</strong> <a href="mailto:jakobazakasoa@gmail.com" class="text-sky-700 underline">jakobazakasoaharijean@gmail.com</a> ou <a href="https://wa.me/261341694839" target="_blank" class="text-sky-700 underline">034 16 948 39</a>.</p>
+  </div>
+</div>
 
-        // ============================================================
-        // FONCTIONS D'ÉTAT DU BOUTON
-        // ============================================================
-        function mettreAJourBouton() {
-            // Date dépassée ?
-            dateDepassee = false;
-            if (configGlobale) {
-                const motifChoisi = document.querySelector('.motif-radio:checked').value;
-                const maintenant = new Date();
-                const dateFinStr = motifChoisi === "Tutoriel" ? configGlobale.Tuto_Fin : configGlobale.Examen_Fin;
-                if (dateFinStr) {
-                    const dateFin = new Date(dateFinStr);
-                    dateFin.setHours(23, 59, 59, 999);
-                    if (maintenant > dateFin) dateDepassee = true;
-                }
-            }
+<script>
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwReJffIptwkKou4qK8vaIYoVRIAPR9QH7yENyhtjJE_QCRejAd-8v1ExA_Z8lwdIvmJg/exec";
+  const TARIF = 6500;
+  let matieresDisponibles = [], matieresSelectionnees = [], typeCommande = 'tutoriel';
+  let commandeId = null; // ID retourné par le backend après création
+  let appConfig = {};    // paramètres (vague active, périodes) lus depuis la feuille Config
 
-            if (dateDepassee) {
-                submitBtn.disabled = true;
-                submitBtn.classList.add('bg-slate-400', 'cursor-not-allowed', 'text-slate-100');
-                submitBtn.classList.remove('bg-sky-900', 'hover:bg-sky-950');
-                showStatus("❌ La date limite pour cette période est dépassée.", "error");
-                return;
-            }
+  // Charge la vague active + les périodes et met à jour l'affichage
+  function chargerConfig(){
+    fetch(WEB_APP_URL + '?action=getPublicConfig').then(r=>r.json()).then(cfg=>{
+      appConfig = cfg || {};
+      const vague = appConfig.Vague_Active;
+      const badge = document.getElementById('session-badge');
+      if(vague){ badge.textContent = 'Session : ' + vague; badge.style.display = 'inline-block'; }
+      afficherPeriode();
+    }).catch(()=>{});
+  }
 
-            const motif = document.querySelector('.motif-radio:checked').value;
-            const ref = refInput.value.trim();
+  function dansPeriode(debut, fin){
+    if(!debut || !fin) return true;
+    const toDate = (s, suffixe) => {
+      s = String(s);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(s)) s = s + suffixe; // ajoute l'heure si date seule
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    };
+    const d0 = toDate(debut, 'T00:00:00'), d1 = toDate(fin, 'T23:59:59');
+    if(!d0 || !d1) return true;
+    const now = new Date();
+    return now >= d0 && now <= d1;
+  }
 
-            if (motif === "Tutoriel") {
-                // Tutoriel : besoin solde suffisant
-                if (ref.length >= 6 && !soldeSuffisant) {
-                    submitBtn.disabled = true;
-                    submitBtn.classList.add('bg-slate-400', 'cursor-not-allowed', 'text-slate-100');
-                    submitBtn.classList.remove('bg-sky-900', 'hover:bg-sky-950');
-                    return;
-                }
-            } else if (motif === "Examen") {
-                // Examen : besoin référence tutoriel valide
-                if (ref.length >= 6 && !refValideExamen) {
-                    submitBtn.disabled = true;
-                    submitBtn.classList.add('bg-slate-400', 'cursor-not-allowed', 'text-slate-100');
-                    submitBtn.classList.remove('bg-sky-900', 'hover:bg-sky-950');
-                    return;
-                }
-            }
+  // Affiche la période du type sélectionné et bloque le bouton si fermé
+  function afficherPeriode(){
+    const t = (document.querySelector('input[name="typeCommande"]:checked')||{}).value || 'tutoriel';
+    const pref = (t === 'examen') ? 'Examen' : 'Tuto';
+    const debut = appConfig[pref+'_Debut'], fin = appConfig[pref+'_Fin'];
+    const info = document.getElementById('periode-info');
+    const btn = document.getElementById('btn-to-step2');
+    if(!debut || !fin){ info.style.display='none'; btn.disabled=false; btn.classList.remove('opacity-50','cursor-not-allowed'); return; }
+    const fmt = s => {
+      if(!s) return ''; s = String(s);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.split('-').reverse().join('-');
+      const d = new Date(s);
+      if(!isNaN(d.getTime())) return String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();
+      return s;
+    };
+    info.style.display='block';
+    if(dansPeriode(debut, fin)){
+      info.className='mt-2 text-xs rounded-lg px-3 py-2 bg-emerald-50 text-emerald-800';
+      info.textContent='✅ Demandes ouvertes du '+fmt(debut)+' au '+fmt(fin)+'.';
+      btn.disabled=false; btn.classList.remove('opacity-50','cursor-not-allowed');
+    } else {
+      info.className='mt-2 text-xs rounded-lg px-3 py-2 bg-red-50 text-red-700';
+      info.textContent='⛔ Demandes fermées. Période autorisée : du '+fmt(debut)+' au '+fmt(fin)+'.';
+      btn.disabled=true; btn.classList.add('opacity-50','cursor-not-allowed');
+    }
+  }
 
-            // Sinon activer
-            submitBtn.disabled = false;
-            submitBtn.classList.add('bg-sky-900', 'hover:bg-sky-950');
-            submitBtn.classList.remove('bg-slate-400', 'cursor-not-allowed', 'text-slate-100');
-            hideStatus();
+  // Échappement HTML pour les valeurs saisies par l'utilisateur
+  function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // POST sans préflight CORS (Content-Type text/plain accepté par Apps Script)
+  function apiPost(payload){
+    return fetch(WEB_APP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) }).then(r=>r.json());
+  }
+
+  function goToStep(s) { document.querySelectorAll('.step-content').forEach(el=>el.classList.remove('active')); document.getElementById('step'+s).classList.add('active'); document.querySelectorAll('.step-dot').forEach(d=>{let n=parseInt(d.dataset.step); d.classList.remove('active','completed'); if(n===s)d.classList.add('active'); else if(n<s)d.classList.add('completed');}); }
+
+  function chargerMatieres() {
+    typeCommande = document.querySelector('input[name="typeCommande"]:checked').value;
+    afficherPeriode();
+    const c = document.getElementById('matieres-container');
+    c.innerHTML = '<p class="text-sm text-slate-400 col-span-2">Chargement...</p>';
+    fetch(WEB_APP_URL + '?action=getMatieresDisponibles&type=' + typeCommande).then(r=>r.json()).then(d=>{ if(d.status==='ok'){ matieresDisponibles=d.matieres; genererCheckboxes(); } else c.innerHTML='<p class="text-sm text-red-500 col-span-2">Erreur</p>'; }).catch(()=>c.innerHTML='<p class="text-sm text-red-500 col-span-2">Erreur réseau</p>');
+  }
+  function genererCheckboxes() {
+    const c = document.getElementById('matieres-container');
+    if(!matieresDisponibles.length){ c.innerHTML='<p class="text-sm text-slate-400 col-span-2">Aucune matière</p>'; return; }
+    c.innerHTML='';
+    matieresDisponibles.forEach(m=>{ let l=document.createElement('label'); l.className='flex items-center space-x-2 text-sm p-2 bg-white rounded border cursor-pointer hover:bg-slate-50'; let inp=document.createElement('input'); inp.type='checkbox'; inp.className='matiere-checkbox'; inp.value=m; inp.addEventListener('change', majCompteur); l.appendChild(inp); let sp=document.createElement('span'); sp.textContent=m; l.appendChild(sp); c.appendChild(l); });
+    majCompteur();
+  }
+  function majCompteur() { let checked=document.querySelectorAll('.matiere-checkbox:checked'); document.getElementById('counter').textContent=checked.length+' / 3'; if(checked.length>3){ checked.forEach((cb,i)=>{if(i>=3)cb.checked=false;}); document.getElementById('counter').textContent='3 / 3'; alert('Max 3 matières.'); } }
+
+  document.getElementById('btn-to-step2').addEventListener('click', function(){
+    const mat = document.getElementById('matricule').value.trim(), wa = document.getElementById('whatsapp').value.trim(), em = document.getElementById('email').value.trim();
+    const matieres = Array.from(document.querySelectorAll('.matiere-checkbox:checked')).map(cb=>cb.value);
+    const statusEl = document.getElementById('status-step1');
+    if(!mat||!wa||!em||matieres.length===0){ statusEl.textContent='❌ Remplissez tous les champs et sélectionnez au moins une matière.'; statusEl.className='mt-2 text-sm text-red-600'; return; }
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ statusEl.textContent='❌ Adresse email invalide.'; statusEl.className='mt-2 text-sm text-red-600'; return; }
+
+    const btn = this; const old = btn.textContent; btn.disabled = true; btn.textContent = 'Création de la commande...';
+    statusEl.classList.add('hidden');
+
+    apiPost({ action:'creerCommande', matricule:mat, whatsapp:wa, email:em, matieres:matieres, type:typeCommande })
+      .then(d=>{
+        if(d.status==='ok'){
+          commandeId = d.commandeId;
+          matieresSelectionnees = matieres;
+          const total = d.montant;
+          let html='<h3 class="font-bold text-slate-700 text-sm mb-2">📋 Récapitulatif</h3>'
+            + '<div class="row"><span>N° commande</span><strong class="font-mono">'+esc(commandeId)+'</strong></div>'
+            + '<div class="row"><span>Type</span><strong>'+esc(typeCommande)+'</strong></div>'
+            + '<div class="row"><span>Matricule</span><strong>'+esc(mat)+'</strong></div>'
+            + '<div class="row"><span>WhatsApp</span><strong>'+esc(wa)+'</strong></div>'
+            + '<div class="row"><span>Email</span><strong>'+esc(em)+'</strong></div>'
+            + '<div class="mt-2"><span class="font-semibold">Matières :</span>';
+          matieres.forEach(m=>{ html+='<div class="matiere-item"><span>'+esc(m)+'</span><span class="text-emerald-700">6 500 Ar</span></div>'; });
+          html+='<div class="matiere-item font-bold"><span>Total</span><span class="text-emerald-800">'+total+' Ar</span></div></div>';
+          document.getElementById('recap-content').innerHTML = html;
+          document.getElementById('montant-exact').textContent = total+' Ar';
+          goToStep(2);
+        } else {
+          statusEl.textContent = '❌ '+(d.message||'Erreur lors de la création.');
+          statusEl.className = 'mt-2 text-sm text-red-600';
         }
+      })
+      .catch(()=>{ statusEl.textContent='❌ Erreur réseau.'; statusEl.className='mt-2 text-sm text-red-600'; })
+      .finally(()=>{ btn.disabled=false; btn.textContent=old; });
+  });
 
-        // ============================================================
-        // RÉCAPITULATIF (adapté au mode)
-        // ============================================================
-        function updateRecap() {
-            const checkedBoxes = document.querySelectorAll('.matiere-checkbox:checked');
-            const nb = checkedBoxes.length;
-            const montant = nb * TARIF;
-            recapNb.textContent = nb;
-            recapMontant.textContent = montant + ' Ar';
+  document.getElementById('btn-to-step3').addEventListener('click', ()=>goToStep(3));
 
-            const whatsapp = document.getElementById('whatsapp').value.trim();
-            const email = document.getElementById('email').value.trim();
-            recapWhatsapp.textContent = whatsapp || '—';
-            recapEmail.textContent = email || '—';
+  document.getElementById('btn-verifier').addEventListener('click', function(){
+    const ref = document.getElementById('ref-paiement').value.trim();
+    const statusEl = document.getElementById('paiement-status');
+    if(!ref){ statusEl.innerHTML='<span class="text-red-600">❌ Entrez la référence.</span>'; return; }
+    if(!commandeId){ statusEl.innerHTML='<span class="text-red-600">❌ Commande introuvable, recommencez.</span>'; return; }
+    const btn=this; btn.disabled=true; btn.innerHTML='Vérification...';
+    apiPost({ action:'verifierPaiement', commandeId:commandeId, ref:ref })
+      .then(d=>{
+        if(d.valide){ document.getElementById('final-commande-id').textContent = d.commandeId || commandeId; statusEl.innerHTML=''; goToStep(4); }
+        else { statusEl.innerHTML='<span class="text-red-600">❌ '+esc(d.message)+'</span>'; btn.disabled=false; btn.innerHTML='Vérifier mon paiement'; }
+      })
+      .catch(()=>{ statusEl.innerHTML='<span class="text-red-600">❌ Erreur réseau.</span>'; btn.disabled=false; btn.innerHTML='Vérifier mon paiement'; });
+  });
 
-            // Cacher le montant en mode Examen
-            const motif = document.querySelector('.motif-radio:checked').value;
-            if (motif === "Examen") {
-                recapMontantRow.style.display = 'none';
-                recapMontant.textContent = 'Gratuit';
-            } else {
-                recapMontantRow.style.display = 'block';
-            }
-
-            if (nb > 0 || whatsapp || email) {
-                recapContainer.classList.remove('hidden');
-            } else {
-                recapContainer.classList.add('hidden');
-            }
-
-            verifierRefEnTempsReel();
-        }
-
-        // ============================================================
-        // GESTION DES CHECKBOXES
-        // ============================================================
-        checkboxes.forEach(box => {
-            box.addEventListener('change', () => {
-                const checkedBoxes = document.querySelectorAll('.matiere-checkbox:checked');
-                counter.innerText = `${checkedBoxes.length} / 3`;
-                if (checkedBoxes.length > 3) {
-                    box.checked = false;
-                    counter.innerText = `3 / 3`;
-                    alert("❌ Limite atteinte : Vous ne pouvez pas sélectionner plus de 3 matières.");
-                }
-                updateRecap();
-            });
-        });
-
-        document.getElementById('whatsapp').addEventListener('input', updateRecap);
-        document.getElementById('email').addEventListener('input', updateRecap);
-
-        // ============================================================
-        // GRILLER EXAMEN AVANT 14/07/2026
-        // ============================================================
-        function gererOptionExamen() {
-            const today = new Date();
-            const dateExamen = new Date('2026-07-14');
-            const examenLabel = document.getElementById('examen-label');
-            const examenRadio = examenLabel.querySelector('input');
-            if (today < dateExamen) {
-                examenLabel.classList.add('disabled-option');
-                examenRadio.disabled = true;
-                if (examenRadio.checked) {
-                    document.querySelector('.motif-radio[value="Tutoriel"]').checked = true;
-                }
-            } else {
-                examenLabel.classList.remove('disabled-option');
-                examenRadio.disabled = false;
-            }
-        }
-
-        // ============================================================
-        // CHARGEMENT CONFIG
-        // ============================================================
-        window.addEventListener('DOMContentLoaded', () => {
-            gererOptionExamen();
-            fetch(`${WEB_APP_URL}?action=getPublicConfig`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.Vague_Active) {
-                        configGlobale = data;
-                        vagueActive = data.Vague_Active;
-                        vagueBadge.innerText = `🔴 Session active : ${vagueActive}`;
-                        vagueBadge.className = "inline-block bg-emerald-100 text-emerald-800 text-xs font-semibold px-3 py-1 rounded-full mt-3";
-                        datesInfo.classList.remove('hidden');
-                        datesInfo.innerHTML = `
-                            <div class="grid grid-cols-2 gap-2 text-center">
-                                <div><strong class="text-sky-700">Tutoriels:</strong><br> ${formaterDate(data.Tuto_Debut)} ➔ ${formaterDate(data.Tuto_Fin)}</div>
-                                <div><strong class="text-sky-700">Examens:</strong><br> ${formaterDate(data.Examen_Debut)} ➔ ${formaterDate(data.Examen_Fin)}</div>
-                            </div>
-                        `;
-                        mettreAJourBouton();
-                        updateRecap();
-                    }
-                })
-                .catch(err => console.error("Erreur de chargement de la configuration."));
-        });
-
-        function formaterDate(isoChaine) {
-            if (!isoChaine) return "N/A";
-            const d = new Date(isoChaine);
-            if (isNaN(d.getTime())) return isoChaine;
-            return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        }
-
-        // ============================================================
-        // CHANGEMENT DE MOTIF
-        // ============================================================
-        motifRadios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                const motif = radio.value;
-                if (motif === "Examen") {
-                    refLabel.textContent = "Référence de paiement Tutoriel (ex: 2370867180)";
-                    // Réinitialiser l'état
-                    refValideExamen = false;
-                    soldeSuffisant = false;
-                    // Effacer le statut
-                    refStatus.innerHTML = "";
-                    recapRefStatus.innerHTML = "";
-                } else {
-                    refLabel.textContent = "Référence de Transaction MVola";
-                }
-                updateRecap();
-                mettreAJourBouton();
-                verifierRefEnTempsReel();
-            });
-        });
-
-        // ============================================================
-        // VÉRIFICATION DE LA RÉFÉRENCE
-        // ============================================================
-        let timeoutValidation;
-
-        function verifierRefEnTempsReel() {
-            const ref = refInput.value.trim();
-            clearTimeout(timeoutValidation);
-
-            if (ref.length < 6) {
-                refStatus.innerHTML = "";
-                recapRefStatus.innerHTML = "";
-                soldeSuffisant = false;
-                refValideExamen = false;
-                mettreAJourBouton();
-                return;
-            }
-
-            const motif = document.querySelector('.motif-radio:checked').value;
-
-            if (motif === "Tutoriel") {
-                // Appel classique verifierRef
-                refStatus.innerHTML = `<span class="text-sky-600">⏳ Vérification...</span>`;
-                recapRefStatus.innerHTML = '';
-                timeoutValidation = setTimeout(() => {
-                    fetch(`${WEB_APP_URL}?action=verifierRef&ref=${ref}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            const nbMatieresChoisies = document.querySelectorAll('.matiere-checkbox:checked').length;
-                            const totalMatieres = (data.nbMatieres || 0) + nbMatieresChoisies;
-                            const montantRequis = totalMatieres * TARIF;
-                            const montantDispo = data.montant || 0;
-
-                            let msg = '', ok = false;
-                            if (data.dejaUtilisee) {
-                                msg = `❌ Cette référence a déjà été utilisée pour ${data.nbMatieres} matière(s).`;
-                            } else if (data.montant === 0) {
-                                msg = `❌ Référence introuvable. Vérifiez votre saisie.`;
-                            } else if (montantDispo < montantRequis) {
-                                msg = `⚠️ Solde insuffisant (${montantDispo} Ar) pour ${totalMatieres} matière(s) (requis ${montantRequis} Ar).`;
-                            } else {
-                                msg = `✅ Référence valide (${montantDispo} Ar) — suffisant pour ${totalMatieres} matière(s).`;
-                                ok = true;
-                            }
-                            refStatus.innerHTML = `<span class="${ok ? 'text-emerald-600' : 'text-red-600'} font-bold">${msg}</span>`;
-                            recapRefStatus.innerHTML = `<span class="${ok ? 'text-emerald-600' : 'text-red-600'}">${msg}</span>`;
-                            soldeSuffisant = ok;
-                            refValideExamen = false;
-                            mettreAJourBouton();
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            refStatus.innerHTML = `<span class="text-orange-500">⚠️ Erreur de vérification.</span>`;
-                            recapRefStatus.innerHTML = '';
-                            soldeSuffisant = false;
-                            mettreAJourBouton();
-                        });
-                }, 800);
-
-            } else if (motif === "Examen") {
-                // Appel verifierRefExamen
-                refStatus.innerHTML = `<span class="text-sky-600">⏳ Vérification référence tutoriel...</span>`;
-                recapRefStatus.innerHTML = '';
-                timeoutValidation = setTimeout(() => {
-                    fetch(`${WEB_APP_URL}?action=verifierRefExamen&ref=${ref}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            let msg = '', ok = false;
-                            if (data.valide) {
-                                msg = `✅ ${data.message}`;
-                                ok = true;
-                            } else {
-                                msg = `❌ ${data.message}`;
-                            }
-                            refStatus.innerHTML = `<span class="${ok ? 'text-emerald-600' : 'text-red-600'} font-bold">${msg}</span>`;
-                            recapRefStatus.innerHTML = `<span class="${ok ? 'text-emerald-600' : 'text-red-600'}">${msg}</span>`;
-                            refValideExamen = ok;
-                            soldeSuffisant = false;
-                            mettreAJourBouton();
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            refStatus.innerHTML = `<span class="text-orange-500">⚠️ Erreur de vérification.</span>`;
-                            recapRefStatus.innerHTML = '';
-                            refValideExamen = false;
-                            mettreAJourBouton();
-                        });
-                }, 800);
-            }
-        }
-
-        refInput.addEventListener('input', verifierRefEnTempsReel);
-
-        // ============================================================
-        // SOUMISSION
-        // ============================================================
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            if (submitBtn.disabled) {
-                showStatus("❌ Votre demande ne peut pas être soumise pour le moment.", "error");
-                return;
-            }
-
-            const checkedBoxes = document.querySelectorAll('.matiere-checkbox:checked');
-            if (checkedBoxes.length === 0) {
-                showStatus("❌ Veuillez sélectionner au moins 1 matière.", "error");
-                return;
-            }
-
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<div class="loader ease-linear rounded-full border-2 border-t-2 border-slate-200 h-4 w-4 mr-2"></div> <span>Traitement en cours...</span>`;
-            hideStatus();
-
-            const matieres = Array.from(checkedBoxes).map(cb => cb.value);
-            const motif = form.elements['motif'].value;
-            const numero = document.getElementById('numero').value.trim();
-            const whatsapp = document.getElementById('whatsapp').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const ref = document.getElementById('refMvola').value.trim();
-
-            const formData = {
-                type: "formulaire",
-                motif: motif,
-                numero: numero,
-                whatsapp: whatsapp,
-                email: email,
-                refMvola: ref,
-                vague: vagueActive,
-                date: new Date().toLocaleDateString('fr-FR'),
-                matieres: matieres
-            };
-
-            console.log("Données envoyées :", formData);
-
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            })
-            .then(() => {
-                // Affichage de confirmation
-                mainContainer.innerHTML = `
-                    <div class="text-center py-6 px-4">
-                        <div class="text-5xl mb-4">🎉</div>
-                        <h2 class="text-2xl font-bold text-emerald-700 mb-2">Demande bien exécutée !</h2>
-                        <p class="text-slate-600 mb-6">Vos accès vous seront envoyés sur WhatsApp et par e-mail dans quelques instants.</p>
-                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 text-left text-sm space-y-3 shadow-sm mb-6">
-                            <h3 class="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">Récapitulatif</h3>
-                            <p><span class="text-slate-500 w-24 inline-block">Matricule :</span> <strong class="text-slate-800">${numero}</strong></p>
-                            <p><span class="text-slate-500 w-24 inline-block">Type :</span> <strong class="text-slate-800">${motif}</strong></p>
-                            <p><span class="text-slate-500 w-24 inline-block">Référence :</span> <strong class="text-slate-800 font-mono">${ref}</strong></p>
-                            <p><span class="text-slate-500 w-24 inline-block">WhatsApp :</span> <strong class="text-slate-800">${whatsapp}</strong></p>
-                            <p><span class="text-slate-500 w-24 inline-block">Email :</span> <strong class="text-slate-800">${email}</strong></p>
-                            <div>
-                                <span class="text-slate-500 w-24 inline-block align-top">Matières :</span> 
-                                <ul class="inline-block list-disc pl-5 font-semibold text-sky-800">
-                                    ${matieres.map(m => `<li class="capitalize">${m}</li>`).join('')}
-                                </ul>
-                            </div>
-                            <p><span class="text-slate-500 w-24 inline-block">Montant payé :</span> <strong class="text-emerald-700">${motif === 'Tutoriel' ? matieres.length * TARIF + ' Ar' : 'Gratuit'}</strong></p>
-                        </div>
-                        <button onclick="location.reload()" class="bg-sky-900 hover:bg-sky-950 text-white font-semibold py-3 px-6 rounded-xl shadow transition">Faire une nouvelle demande</button>
-                    </div>
-                `;
-            })
-            .catch(error => {
-                console.error('Erreur fetch :', error);
-                showStatus("❌ Une erreur de connexion s'est produite. Veuillez réessayer.", "error");
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = "<span>Envoyer ma demande</span>";
-            });
-        });
-
-        function showStatus(msg, type) {
-            statusMessage.innerText = msg;
-            statusMessage.className = `p-4 rounded-xl text-sm font-medium mt-4 ${type === 'error' ? 'bg-red-50 text-red-800' : 'bg-emerald-50 text-emerald-800'}`;
-            statusMessage.classList.remove('hidden');
-        }
-
-        function hideStatus() {
-            statusMessage.classList.add('hidden');
-        }
-    </script>
+  // Initialisation
+  window.addEventListener('DOMContentLoaded', ()=>{ chargerConfig(); chargerMatieres(); document.querySelectorAll('input[name="typeCommande"]').forEach(r=>r.addEventListener('change', chargerMatieres)); });
+</script>
 </body>
 </html>

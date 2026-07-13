@@ -5,35 +5,164 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IMGAM — Commandes</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    .loader { border-top-color: #3498db; animation: spinner 1.5s linear infinite; }
-    @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .step-indicator { display: flex; justify-content: space-between; margin-bottom: 24px; position: relative; }
-    .step-indicator::before { content: ''; position: absolute; top: 16px; left: 10%; right: 10%; height: 2px; background: #e2e8f0; z-index: 0; }
-    .step-dot { display: flex; flex-direction: column; align-items: center; z-index: 1; flex: 1; }
-    .step-dot .circle { width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0; color: #64748b; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; transition: all 0.3s; border: 2px solid transparent; }
-    .step-dot.active .circle { background: #0f1a2e; color: white; border-color: #0f1a2e; }
-    .step-dot.completed .circle { background: #1a8a5a; color: white; border-color: #1a8a5a; }
-    .step-dot .label { font-size: 10px; margin-top: 4px; color: #64748b; text-align: center; }
-    .step-dot.active .label { color: #0f1a2e; font-weight: 600; }
-    .step-dot.completed .label { color: #1a8a5a; }
-    .step-content { display: none; animation: fadeIn 0.3s ease; }
-    .step-content.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .payment-info { background: #f8fafc; border-radius: 12px; padding: 16px; border: 1px solid #e2e8f0; }
-    .payment-info .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
-    .matiere-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #e2e8f0; }
-    .matiere-item:last-child { border-bottom: none; }
-    .support-link { color: #0f1a2e; text-decoration: underline; font-weight: 600; }
+    :root{
+      --navy:#0f1a2e; --navy-2:#1e3a5f; --blue:#2563eb;
+      --emerald:#059669; --emerald-2:#047857;
+      --ring:rgba(37,99,235,.14);
+    }
+    *{ -webkit-tap-highlight-color: transparent; }
+    body{
+      font-family:'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      color:#0f172a;
+      background:
+        radial-gradient(1100px 560px at 8% -12%, rgba(191,219,254,.55), transparent 60%),
+        radial-gradient(1000px 520px at 112% 6%, rgba(167,243,208,.5), transparent 55%),
+        linear-gradient(180deg,#f8fafc 0%, #eef2f7 100%);
+      background-attachment: fixed;
+    }
+
+    /* ---- Carte ---- */
+    .imgam-card{
+      position:relative;
+      background:rgba(255,255,255,.92);
+      backdrop-filter: blur(6px);
+      border:1px solid rgba(255,255,255,.9);
+      box-shadow:0 24px 60px -18px rgba(15,26,46,.28), 0 4px 12px -6px rgba(15,26,46,.12);
+      overflow:hidden;
+    }
+    .imgam-card::before{
+      content:''; position:absolute; top:0; left:0; right:0; height:4px;
+      background:linear-gradient(90deg,var(--navy),var(--blue) 55%,var(--emerald));
+    }
+
+    /* ---- En-tête ---- */
+    .imgam-title{
+      font-weight:800; letter-spacing:-.025em;
+      background:linear-gradient(120deg,var(--navy),var(--blue));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:.72rem; font-weight:700; letter-spacing:.02em;
+      color:#0369a1; background:linear-gradient(135deg,#e0f2fe,#dbeafe);
+      border:1px solid #bae6fd; padding:5px 13px; border-radius:999px;
+    }
+    .badge::before{ content:''; width:7px; height:7px; border-radius:999px; background:#0ea5e9; box-shadow:0 0 0 3px rgba(14,165,233,.2); }
+
+    /* ---- Indicateur d'étapes ---- */
+    .step-indicator { display: flex; justify-content: space-between; margin-bottom: 28px; position: relative; }
+    .step-indicator::before { content:''; position:absolute; top:18px; left:11%; right:11%; height:3px; border-radius:999px; background:#e2e8f0; z-index:0; }
+    .step-dot { display:flex; flex-direction:column; align-items:center; z-index:1; flex:1; }
+    .step-dot .circle {
+      width:38px; height:38px; border-radius:50%;
+      background:#fff; color:#94a3b8; display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:14px; transition:all .35s cubic-bezier(.4,0,.2,1);
+      border:2px solid #e2e8f0; box-shadow:0 1px 2px rgba(15,23,42,.06);
+    }
+    .step-dot.active .circle {
+      background:linear-gradient(135deg,var(--navy-2),var(--navy)); color:#fff; border-color:transparent;
+      box-shadow:0 0 0 5px rgba(30,58,95,.14), 0 8px 18px -6px rgba(15,26,46,.5);
+      transform:scale(1.06);
+    }
+    .step-dot.completed .circle {
+      background:linear-gradient(135deg,#10b981,var(--emerald-2)); color:#fff; border-color:transparent;
+      box-shadow:0 6px 14px -6px rgba(5,150,105,.5);
+    }
+    .step-dot .label { font-size:11px; margin-top:7px; color:#94a3b8; text-align:center; font-weight:500; transition:color .3s; }
+    .step-dot.active .label { color:var(--navy); font-weight:700; }
+    .step-dot.completed .label { color:var(--emerald-2); font-weight:600; }
+
+    .step-content { display:none; animation:fadeIn .4s cubic-bezier(.4,0,.2,1); }
+    .step-content.active { display:block; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ---- Titres de section ---- */
+    .sec-title{ display:flex; align-items:center; gap:10px; font-size:1.15rem; font-weight:700; color:#1e293b; letter-spacing:-.01em; }
+    .sec-title .ic{ display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:11px; font-size:1rem; background:linear-gradient(135deg,#eff6ff,#e0e7ff); border:1px solid #e0e7ff; }
+
+    /* ---- Champs ---- */
+    .imgam-label{ display:block; font-size:.72rem; font-weight:700; color:#475569; margin-bottom:5px; letter-spacing:.01em; }
+    .imgam-field{
+      width:100%; padding:.62rem .85rem; font-size:.9rem; color:#0f172a;
+      background:#fff; border:1.5px solid #e2e8f0; border-radius:12px;
+      transition:border-color .15s, box-shadow .15s, background .15s;
+    }
+    .imgam-field::placeholder{ color:#a3adba; }
+    .imgam-field:hover{ border-color:#cbd5e1; }
+    .imgam-field:focus{ outline:none; border-color:var(--navy-2); box-shadow:0 0 0 4px var(--ring); background:#fff; }
+    .imgam-field:disabled{ background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
+    select.imgam-field{
+      appearance:none; -webkit-appearance:none; padding-right:2.1rem; cursor:pointer;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right .8rem center;
+    }
+    input[type=checkbox], input[type=radio]{ accent-color:var(--navy-2); }
+
+    /* ---- Segmented control (type de demande) ---- */
+    .type-toggle{ display:inline-flex; gap:5px; padding:5px; background:#eef2f7; border:1px solid #e2e8f0; border-radius:14px; }
+    .type-toggle label{ position:relative; cursor:pointer; }
+    .type-toggle label input{ position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; }
+    .type-toggle label span{ display:block; padding:.5rem 1.15rem; border-radius:10px; font-size:.85rem; font-weight:600; color:#64748b; transition:all .2s; user-select:none; }
+    .type-toggle label:hover span{ color:#334155; }
+    .type-toggle label:has(input:checked) span{ background:#fff; color:var(--navy); box-shadow:0 2px 8px rgba(15,26,46,.14); }
+
+    /* ---- Compteur ---- */
+    .counter-pill{ font-size:.72rem; font-weight:700; color:#334155; background:#f1f5f9; border:1px solid #e2e8f0; padding:4px 11px; border-radius:999px; }
+
+    /* ---- Liste des matières ---- */
+    #matieres-container{ scrollbar-width:thin; scrollbar-color:#cbd5e1 transparent; }
+    #matieres-container::-webkit-scrollbar{ width:8px; }
+    #matieres-container::-webkit-scrollbar-thumb{ background:#cbd5e1; border-radius:999px; }
+    #matieres-container > label{
+      border:1.5px solid #e5e7eb !important; border-radius:12px !important;
+      background:#fff !important; transition:border-color .15s, box-shadow .15s, background .15s;
+    }
+    #matieres-container > label:hover{ border-color:#c7d2fe !important; box-shadow:0 2px 8px -4px rgba(15,26,46,.15); }
+    #matieres-container > label:has(input:checked){ border-color:var(--navy-2) !important; background:#eff6ff !important; box-shadow:0 2px 10px -4px rgba(30,58,95,.28); }
+
+    /* ---- Encarts d'information ---- */
+    .payment-info { background:#f8fafc; border-radius:16px; padding:18px; border:1px solid #e9eef4; }
+    .payment-info .row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; font-size:14px; border-bottom:1px dashed #e5e9f0; }
+    .payment-info .row:last-child{ border-bottom:none; }
+    .payment-info--mvola{ background:linear-gradient(160deg,#ecfdf5,#f0fdfa); border:1px solid #a7f3d0; }
+    .payment-info--mvola .row{ border-bottom-color:#c9f0dd; }
+    .matiere-item { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed #e5e9f0; font-size:14px; }
+    .matiere-item:last-child { border-bottom:none; }
+    .support-link { color:var(--emerald-2); text-decoration:none; font-weight:700; border-bottom:1.5px solid rgba(4,120,87,.35); }
+    .support-link:hover{ border-bottom-color:var(--emerald-2); }
+
+    /* ---- Boutons ---- */
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:.45rem;
+      font-weight:700; font-size:.95rem; padding:.8rem 1.1rem; border-radius:14px; border:none; cursor:pointer;
+      transition:transform .15s ease, box-shadow .2s ease, background .2s ease, opacity .2s ease;
+    }
+    .btn:hover{ transform:translateY(-1px); }
+    .btn:active{ transform:translateY(0) scale(.99); }
+    .btn:disabled{ transform:none; cursor:not-allowed; opacity:.55; box-shadow:none; }
+    .btn-primary{ color:#fff; background:linear-gradient(135deg,var(--navy-2),var(--navy)); box-shadow:0 10px 22px -10px rgba(15,26,46,.6); }
+    .btn-primary:hover{ box-shadow:0 14px 26px -10px rgba(15,26,46,.7); }
+    .btn-success{ color:#fff; background:linear-gradient(135deg,#10b981,var(--emerald-2)); box-shadow:0 10px 22px -10px rgba(5,150,105,.6); }
+    .btn-success:hover{ box-shadow:0 14px 26px -10px rgba(5,150,105,.7); }
+    .btn-ghost{ color:#475569; background:#f1f5f9; border:1px solid #e2e8f0; font-size:.88rem; padding:.62rem 1rem; }
+    .btn-ghost:hover{ background:#e8edf3; color:#334155; }
+
+    /* ---- Écran de succès ---- */
+    .success-pop{ animation:pop .5s cubic-bezier(.2,.8,.3,1.2); }
+    @keyframes pop{ 0%{ transform:scale(.4); opacity:0; } 60%{ transform:scale(1.12); } 100%{ transform:scale(1); opacity:1; } }
   </style>
 </head>
-<body class="bg-slate-50 p-4 min-h-screen flex items-center justify-center">
-<div class="bg-white shadow-xl rounded-2xl max-w-2xl w-full p-6 md:p-8">
+<body class="p-4 min-h-screen flex items-center justify-center">
+<div class="imgam-card rounded-3xl max-w-2xl w-full p-6 md:p-9">
 
-  <div class="text-center mb-6">
-    <h1 class="text-2xl font-bold text-sky-900">🎓 Portail IMGAM</h1>
-    <p class="text-slate-500 text-sm">Commande de tutoriels et sujets d'examen</p>
-    <span id="session-badge" class="inline-block mt-2 text-xs font-semibold bg-sky-100 text-sky-800 px-3 py-1 rounded-full" style="display:none;"></span>
+  <div class="text-center mb-7">
+    <h1 class="text-2xl md:text-3xl"><span aria-hidden="true">🎓</span> <span class="imgam-title">Portail IMGAM</span></h1>
+    <p class="text-slate-500 text-sm mt-1">Commande de tutoriels et sujets d'examen</p>
+    <span id="session-badge" class="badge mt-3" style="display:none;"></span>
   </div>
 
   <!-- Indicateur d'étapes -->
@@ -46,89 +175,89 @@
 
   <!-- ÉTAPE 1 -->
   <div id="step1" class="step-content active">
-    <h2 class="text-xl font-bold text-slate-800 mb-2">📚 Sélectionnez vos matières</h2>
-    <p class="text-sm text-slate-500 mb-4">Choisissez 1 à 3 matières. Tarif : <strong class="text-sky-800">6 500 Ar</strong> par matière.</p>
-    <div class="mb-4">
-      <label class="block text-sm font-semibold text-slate-700">Type de demande</label>
-      <div class="flex gap-4 mt-1">
-        <label class="flex items-center text-sm"><input type="radio" name="typeCommande" value="tutoriel" checked> Tutoriel</label>
-        <label class="flex items-center text-sm"><input type="radio" name="typeCommande" value="examen"> Examen</label>
+    <h2 class="sec-title mb-2"><span class="ic">📚</span> Sélectionnez vos matières</h2>
+    <p class="text-sm text-slate-500 mb-5">Choisissez 1 à 3 matières. Tarif : <strong class="text-sky-800">6 500 Ar</strong> par matière.</p>
+    <div class="mb-5">
+      <label class="imgam-label">Type de demande</label>
+      <div class="type-toggle">
+        <label><input type="radio" name="typeCommande" value="tutoriel" checked><span>📘 Tutoriel</span></label>
+        <label><input type="radio" name="typeCommande" value="examen"><span>📝 Examen</span></label>
       </div>
-      <div id="periode-info" class="mt-2 text-xs rounded-lg px-3 py-2" style="display:none;"></div>
+      <div id="periode-info" class="mt-3 text-xs rounded-lg px-3 py-2" style="display:none;"></div>
     </div>
-    <div class="mb-4">
+    <div class="mb-5">
       <div class="flex justify-between items-center">
         <span class="text-sm font-semibold text-slate-700">Matières disponibles</span>
-        <span id="counter" class="text-xs bg-slate-100 px-2 py-1 rounded">0 / 3</span>
+        <span id="counter" class="counter-pill">0 / 3</span>
       </div>
       <p class="text-xs text-slate-500 mt-1">Choisissez d’abord votre grade et votre niveau, puis cochez les matières souhaitées.</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
         <div>
-          <label for="grade-select" class="block text-xs font-bold text-slate-600 mb-1">Grade</label>
-          <select id="grade-select" class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+          <label for="grade-select" class="imgam-label">Grade</label>
+          <select id="grade-select" class="imgam-field">
             <option value="">— Sélectionnez le grade —</option>
           </select>
         </div>
         <div>
-          <label for="niveau-select" class="block text-xs font-bold text-slate-600 mb-1">Niveau</label>
-          <select id="niveau-select" class="w-full px-3 py-2 border rounded-lg text-sm bg-white" disabled>
+          <label for="niveau-select" class="imgam-label">Niveau</label>
+          <select id="niveau-select" class="imgam-field" disabled>
             <option value="">— Sélectionnez d’abord le grade —</option>
           </select>
         </div>
       </div>
-      <div id="selection-resume" class="mt-3 text-xs rounded-lg px-3 py-2 bg-sky-50 text-sky-900" style="display:none;"></div>
-      <div id="matieres-container" class="grid grid-cols-1 gap-2 mt-3 max-h-60 overflow-y-auto p-2 border rounded-lg bg-slate-50"><p class="text-sm text-slate-400">Sélectionnez un grade puis un niveau.</p></div>
+      <div id="selection-resume" class="mt-3 text-xs rounded-xl px-3 py-2 bg-sky-50 text-sky-900 border border-sky-100" style="display:none;"></div>
+      <div id="matieres-container" class="grid grid-cols-1 gap-2 mt-3 max-h-64 overflow-y-auto p-2 rounded-xl bg-slate-50/70 border border-slate-200"><p class="text-sm text-slate-400 p-2">Sélectionnez un grade puis un niveau.</p></div>
     </div>
-    <div class="grid grid-cols-2 gap-3 mt-4">
-      <div><label class="block text-xs font-bold text-slate-600">N° Matricule <span class="text-red-600">*</span></label><input type="text" id="matricule" required placeholder="Ex: 49000 ou FM-5000" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
-      <div><label class="block text-xs font-bold text-slate-600">WhatsApp <span class="text-red-600">*</span></label><input type="tel" id="whatsapp" required placeholder="Votre N° WhatsApp" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+      <div><label class="imgam-label">N° Matricule <span class="text-red-500">*</span></label><input type="text" id="matricule" required placeholder="Ex: 49000 ou FM-5000" class="imgam-field"></div>
+      <div><label class="imgam-label">WhatsApp <span class="text-red-500">*</span></label><input type="tel" id="whatsapp" required placeholder="Votre N° WhatsApp" class="imgam-field"></div>
     </div>
-    <div class="mt-2"><label class="block text-xs font-bold text-slate-600">Email <span class="text-red-600">*</span> <span class="font-normal text-slate-400">(compte Google obligatoire pour l'accès Drive)</span></label><input type="email" id="email" required placeholder="nom@gmail.com" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
-    <button id="btn-to-step2" class="w-full bg-sky-900 hover:bg-sky-950 text-white font-semibold py-3 rounded-xl mt-4 transition">Continuer →</button>
-    <div id="status-step1" class="mt-2 text-sm hidden"></div>
+    <div class="mt-3"><label class="imgam-label">Email <span class="text-red-500">*</span> <span class="font-normal text-slate-400 lowercase tracking-normal">(compte Google obligatoire pour l'accès Drive)</span></label><input type="email" id="email" required placeholder="nom@gmail.com" class="imgam-field"></div>
+    <button id="btn-to-step2" class="btn btn-primary w-full mt-5">Continuer →</button>
+    <div id="status-step1" class="mt-3 text-sm hidden"></div>
   </div>
 
   <!-- ÉTAPE 2 -->
   <div id="step2" class="step-content">
-    <h2 class="text-xl font-bold text-slate-800 mb-2">💳 Récapitulatif et paiement</h2>
+    <h2 class="sec-title mb-4"><span class="ic">💳</span> Récapitulatif et paiement</h2>
     <div id="recap-content" class="payment-info mb-4"></div>
-    <div class="payment-info bg-emerald-50 border-emerald-200 mb-4">
-      <h3 class="font-bold text-emerald-800 text-sm mb-2">📲 Informations de paiement MVola</h3>
-      <div class="row"><span>Numéro MVola :</span> <strong class="text-emerald-900">034 16 948 39</strong></div>
-      <div class="row"><span>Bénéficiaire :</span> <strong class="text-emerald-900">IMGAM</strong></div>
-      <div class="row"><span>Tarif :</span> <strong class="text-emerald-900">6 500 Ar / matière</strong></div>
-      <div class="row"><span>Montant exact :</span> <strong class="text-emerald-900" id="montant-exact">0 Ar</strong></div>
-      <div class="row"><span>Délai de traitement :</span> <strong class="text-emerald-900">Moins de 5 minutes</strong></div>
-      <div class="row"><span>Support :</span> <a href="https://wa.me/261341694839" target="_blank" class="support-link">+261 34 169 48 39</a></div>
+    <div class="payment-info payment-info--mvola mb-5">
+      <h3 class="font-bold text-emerald-800 text-sm mb-2 flex items-center gap-2">📲 Informations de paiement MVola</h3>
+      <div class="row"><span class="text-slate-600">Numéro MVola :</span> <strong class="text-emerald-900 tracking-wide">034 16 948 39</strong></div>
+      <div class="row"><span class="text-slate-600">Bénéficiaire :</span> <strong class="text-emerald-900">IMGAM</strong></div>
+      <div class="row"><span class="text-slate-600">Tarif :</span> <strong class="text-emerald-900">6 500 Ar / matière</strong></div>
+      <div class="row"><span class="text-slate-600">Montant exact :</span> <strong class="text-emerald-900 text-base" id="montant-exact">0 Ar</strong></div>
+      <div class="row"><span class="text-slate-600">Délai de traitement :</span> <strong class="text-emerald-900">Moins de 5 minutes</strong></div>
+      <div class="row"><span class="text-slate-600">Support :</span> <a href="https://wa.me/261341694839" target="_blank" class="support-link">+261 34 169 48 39</a></div>
     </div>
-    <button id="btn-to-step3" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3 rounded-xl transition">J'ai effectué le paiement →</button>
-    <button class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-xl mt-2 text-sm transition" onclick="goToStep(1)">← Modifier</button>
+    <button id="btn-to-step3" class="btn btn-success w-full">J'ai effectué le paiement →</button>
+    <button class="btn btn-ghost w-full mt-2" onclick="goToStep(1)">← Modifier</button>
   </div>
 
   <!-- ÉTAPE 3 -->
   <div id="step3" class="step-content">
-    <h2 class="text-xl font-bold text-slate-800 mb-2">🔑 Saisissez la référence MVola</h2>
-    <p class="text-sm text-slate-500 mb-4">Entrez la référence reçue par SMS après votre paiement.</p>
-    <div><label class="block text-xs font-bold text-slate-600">Référence MVola <span class="font-normal text-slate-400">(10 chiffres)</span></label><input type="text" id="ref-paiement" inputmode="numeric" maxlength="10" placeholder="Ex: 2370867180" class="w-full px-4 py-2 border rounded-xl font-mono text-lg"></div>
-    <button id="btn-verifier" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3 rounded-xl mt-4 transition">Vérifier mon paiement</button>
+    <h2 class="sec-title mb-2"><span class="ic">🔑</span> Saisissez la référence MVola</h2>
+    <p class="text-sm text-slate-500 mb-5">Entrez la référence reçue par SMS après votre paiement.</p>
+    <div><label class="imgam-label">Référence MVola <span class="font-normal text-slate-400 tracking-normal">(10 chiffres)</span></label><input type="text" id="ref-paiement" inputmode="numeric" maxlength="10" placeholder="Ex: 2370867180" class="imgam-field font-mono text-lg text-center tracking-[.35em]"></div>
+    <button id="btn-verifier" class="btn btn-success w-full mt-4">Vérifier mon paiement</button>
     <div id="paiement-status" class="mt-3 text-sm"></div>
-    <button class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-xl mt-2 text-sm transition" onclick="goToStep(2)">← Retour</button>
+    <button class="btn btn-ghost w-full mt-2" onclick="goToStep(2)">← Retour</button>
   </div>
 
   <!-- ÉTAPE 4 -->
   <div id="step4" class="step-content text-center py-6">
-    <div class="text-6xl mb-4">🎉</div>
-    <h2 class="text-2xl font-bold text-emerald-700">Commande validée !</h2>
-    <p class="text-slate-600 mb-4">Vos accès ont été envoyés par email.</p>
-    <div class="bg-slate-50 p-4 rounded-lg text-left text-sm mb-4"><p><strong>N° de commande :</strong> <span id="final-commande-id" class="font-mono">—</span></p></div>
-    <button onclick="location.reload()" class="bg-sky-900 hover:bg-sky-950 text-white px-6 py-2 rounded-xl transition">Nouvelle commande</button>
+    <div class="text-6xl mb-4 success-pop">🎉</div>
+    <h2 class="text-2xl font-extrabold text-emerald-700">Commande validée !</h2>
+    <p class="text-slate-600 mb-5">Vos accès ont été envoyés par email.</p>
+    <div class="payment-info payment-info--mvola text-left text-sm mb-5"><p><strong class="text-slate-700">N° de commande :</strong> <span id="final-commande-id" class="font-mono text-emerald-800">—</span></p></div>
+    <button onclick="location.reload()" class="btn btn-primary mx-auto px-7">Nouvelle commande</button>
   </div>
 
   <!-- Protection des données -->
   <div class="mt-8 pt-6 border-t border-slate-200 text-xs text-slate-500 space-y-2">
-    <p>📋 <strong>Protection de vos données</strong><br>Les informations fournies sont utilisées uniquement pour vérifier votre demande, transmettre vos accès et assurer le suivi administratif.</p>
-    <p>⏳ <strong>Durée de conservation :</strong> Pendant la durée de la formation, puis archivage légal.</p>
-    <p>📧 <strong>Contact :</strong> <a href="mailto:jakobazakasoa@gmail.com" class="text-sky-700 underline">jakobazakasoaharijean@gmail.com</a> ou <a href="https://wa.me/261341694839" target="_blank" class="text-sky-700 underline">034 16 948 39</a>.</p>
+    <p>📋 <strong class="text-slate-600">Protection de vos données</strong><br>Les informations fournies sont utilisées uniquement pour vérifier votre demande, transmettre vos accès et assurer le suivi administratif.</p>
+    <p>⏳ <strong class="text-slate-600">Durée de conservation :</strong> Pendant la durée de la formation, puis archivage légal.</p>
+    <p>📧 <strong class="text-slate-600">Contact :</strong> <a href="mailto:jakobazakasoa@gmail.com" class="text-sky-700 underline">jakobazakasoaharijean@gmail.com</a> ou <a href="https://wa.me/261341694839" target="_blank" class="text-sky-700 underline">034 16 948 39</a>.</p>
   </div>
 </div>
 

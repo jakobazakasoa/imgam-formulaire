@@ -579,9 +579,35 @@
     if(!mat||!wa||!em||matieres.length===0){ statusEl.textContent='❌ Remplissez tous les champs et sélectionnez au moins une matière.'; statusEl.className='mt-2 text-sm text-red-600'; return; }
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ statusEl.textContent='❌ Adresse email invalide.'; statusEl.className='mt-2 text-sm text-red-600'; return; }
 
-    const btn = this; const old = btn.textContent; btn.disabled = true; btn.textContent = 'Création de la commande...';
+    const btn = this; const old = btn.textContent; btn.disabled = true;
     statusEl.classList.add('hidden');
 
+    // EXAMEN : recherche automatique du tutoriel déjà payé.
+    // Aucune nouvelle commande payante et aucune ressaisie de référence MVola.
+    if(typeCommande === 'examen'){
+      btn.textContent = 'Recherche du paiement du tutoriel...';
+      apiPost({ action:'obtenirSujetExamen', matricule:mat, whatsapp:wa, email:em, matieres:matieres.map(codeMatiere) })
+        .then(d=>{
+          if(d.status === 'ok'){
+            commandeId = d.commandeId;
+            matieresSelectionnees = matieres;
+            document.getElementById('final-commande-id').textContent = d.commandeId || '—';
+            goToStep(4);
+          } else {
+            statusEl.textContent = '❌ '+(d.message || 'Paiement du tutoriel introuvable.');
+            statusEl.className = 'mt-2 text-sm text-red-600';
+          }
+        })
+        .catch(()=>{
+          statusEl.textContent='❌ Erreur réseau.';
+          statusEl.className='mt-2 text-sm text-red-600';
+        })
+        .finally(()=>{ btn.disabled=false; btn.textContent=old; });
+      return;
+    }
+
+    // TUTORIEL : flux de paiement existant conservé sans modification.
+    btn.textContent = 'Création de la commande...';
     apiPost({ action:'creerCommande', matricule:mat, whatsapp:wa, email:em, matieres:matieres.map(codeMatiere), type:typeCommande })
       .then(d=>{
         if(d.status==='ok'){

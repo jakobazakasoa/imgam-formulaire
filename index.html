@@ -656,7 +656,7 @@
         }
       })
       .catch(()=>{
-        // Aucune réponse (Apps Script / Make / Google Sheets injoignable) :
+        // Aucune réponse (Apps Script / Forward SMS / Gmail injoignable) :
         // SEUL cas où l'on invite l'étudiant à patienter puis réessayer.
         statusEl.innerHTML='<span class="text-amber-600">⏳ Service momentanément indisponible. Patientez 1 à 2 minutes puis réessayez.</span>';
         btn.disabled=false; btn.innerHTML='Vérifier mon paiement';

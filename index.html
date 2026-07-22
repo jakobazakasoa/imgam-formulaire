@@ -1,1202 +1,676 @@
-// ============================================================
-// SCRIPT GOOGLE APPS SCRIPT — IMGAM v24 (FORWARD SMS → GMAIL)
-// ============================================================
-// Flux de vérification MVola :
-//   Téléphone Android → application Forward SMS → Gmail → Apps Script
-//
-// Principes :
-//  [1] Make n'est plus utilisé : aucun webhook SMS externe n'est nécessaire.
-//  [2] WhatsApp/Fonnte n'est plus utilisé pour les notifications.
-//      Les accès étudiants continuent d'être envoyés par e-mail.
-//  [3] Lors d'une vérification de paiement, le script lit immédiatement
-//      les nouveaux e-mails Forward SMS avant de rechercher la référence MVola.
-//  [4] Un déclencheur Gmail périodique peut aussi alimenter MVola_SMS.
-//
-// ⚙️ AVANT DÉPLOIEMENT — Propriétés du script :
-//     ADMIN_PASSWORD   = <mot de passe admin>
-//     GMAIL_SMS_QUERY  = label:imgam-sms is:unread   (optionnel)
-//
-// Dans Gmail, créez un filtre sur les e-mails provenant de Forward SMS et
-// appliquez le libellé « IMGAM-SMS ». Aucun secret webhook n'est nécessaire.
-// ============================================================
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IMGAM — Commandes</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --navy:#0f1a2e; --navy-2:#1e3a5f; --blue:#2563eb;
+      --emerald:#059669; --emerald-2:#047857;
+      --ring:rgba(37,99,235,.14);
+    }
+    *{ -webkit-tap-highlight-color: transparent; }
+    body{
+      font-family:'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      color:#0f172a;
+      background:
+        radial-gradient(1100px 560px at 8% -12%, rgba(191,219,254,.55), transparent 60%),
+        radial-gradient(1000px 520px at 112% 6%, rgba(167,243,208,.5), transparent 55%),
+        linear-gradient(180deg,#f8fafc 0%, #eef2f7 100%);
+      background-attachment: fixed;
+    }
 
-var CONFIG = {
-  adminEmail     : "jakobazakasoaharijean@gmail.com",
-  tarifParMatiere: 6500,
-  USE_PUBLIC_LINKS: false // false = partage sécurisé (par email)
-};
+    /* ---- Carte ---- */
+    .imgam-card{
+      position:relative;
+      background:rgba(255,255,255,.92);
+      backdrop-filter: blur(6px);
+      border:1px solid rgba(255,255,255,.9);
+      box-shadow:0 24px 60px -18px rgba(15,26,46,.28), 0 4px 12px -6px rgba(15,26,46,.12);
+      overflow:hidden;
+    }
+    .imgam-card::before{
+      content:''; position:absolute; top:0; left:0; right:0; height:4px;
+      background:linear-gradient(90deg,var(--navy),var(--blue) 55%,var(--emerald));
+    }
 
-var FEUILLES = {
-  formulaire : "Réponses au formulaire 1",
-  sms        : "MVola_SMS",
-  mvolaRecu  : "Mvola_Recu",
-  commandes  : "Commandes",
-  config     : "Config",
-  historique : "Historique_Envois",
-  stats      : "Stats_Messages",
-  logs       : "Logs_Erreurs"
-};
+    /* ---- En-tête ---- */
+    .imgam-title{
+      font-weight:800; letter-spacing:-.025em;
+      background:linear-gradient(120deg,var(--navy),var(--blue));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:.72rem; font-weight:700; letter-spacing:.02em;
+      color:#0369a1; background:linear-gradient(135deg,#e0f2fe,#dbeafe);
+      border:1px solid #bae6fd; padding:5px 13px; border-radius:999px;
+    }
+    .badge::before{ content:''; width:7px; height:7px; border-radius:999px; background:#0ea5e9; box-shadow:0 0 0 3px rgba(14,165,233,.2); }
 
-// Colonnes "Réponses au formulaire 1" (journal secondaire)
-var COLS = {
-  timestamp     : 1, date : 2, whatsapp : 3, motif : 4,
-  matiere       : 5, numero : 6, vague : 7, refMvola : 8,
-  email         : 9, statut : 10, numeroDemande : 11
-};
+    /* ---- Indicateur d'étapes ---- */
+    .step-indicator { display: flex; justify-content: space-between; margin-bottom: 28px; position: relative; }
+    .step-indicator::before { content:''; position:absolute; top:18px; left:11%; right:11%; height:3px; border-radius:999px; background:#e2e8f0; z-index:0; }
+    .step-dot { display:flex; flex-direction:column; align-items:center; z-index:1; flex:1; }
+    .step-dot .circle {
+      width:38px; height:38px; border-radius:50%;
+      background:#fff; color:#94a3b8; display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:14px; transition:all .35s cubic-bezier(.4,0,.2,1);
+      border:2px solid #e2e8f0; box-shadow:0 1px 2px rgba(15,23,42,.06);
+    }
+    .step-dot.active .circle {
+      background:linear-gradient(135deg,var(--navy-2),var(--navy)); color:#fff; border-color:transparent;
+      box-shadow:0 0 0 5px rgba(30,58,95,.14), 0 8px 18px -6px rgba(15,26,46,.5);
+      transform:scale(1.06);
+    }
+    .step-dot.completed .circle {
+      background:linear-gradient(135deg,#10b981,var(--emerald-2)); color:#fff; border-color:transparent;
+      box-shadow:0 6px 14px -6px rgba(5,150,105,.5);
+    }
+    .step-dot .label { font-size:11px; margin-top:7px; color:#94a3b8; text-align:center; font-weight:500; transition:color .3s; }
+    .step-dot.active .label { color:var(--navy); font-weight:700; }
+    .step-dot.completed .label { color:var(--emerald-2); font-weight:600; }
 
-// Colonnes de la feuille "Commandes" (SOURCE DE VÉRITÉ UNIQUE)
-var COLS_CMD = {
-  idCommande  : 1, matricule : 2, whatsapp : 3, email : 4, type : 5,
-  matieres    : 6, montant : 7, statut : 8, refMvola : 9,
-  dateCreation: 10, datePaiement : 11
-};
+    .step-content { display:none; animation:fadeIn .4s cubic-bezier(.4,0,.2,1); }
+    .step-content.active { display:block; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
-var COLS_SMS = { timestamp : 1, expediteur : 2, message : 3 };
-var ENVOI_CACHE = {};
+    /* ---- Titres de section ---- */
+    .sec-title{ display:flex; align-items:center; gap:10px; font-size:1.15rem; font-weight:700; color:#1e293b; letter-spacing:-.01em; }
+    .sec-title .ic{ display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:11px; font-size:1rem; background:linear-gradient(135deg,#eff6ff,#e0e7ff); border:1px solid #e0e7ff; }
 
-// ============================================================
-// MATIÈRES ET DISPONIBILITÉ
-// ============================================================
-var MATIERE_MAP = {
-  // Libellés affichés dans le formulaire (Licence / Master)
-  "informatique de base": "Infobase",
-  "gestion de base de données": "GBD",
-  "sage gestion commerciale 1": "Sage Gestion N1",
-  "sage comptabilité n1": "Sage Compta N1",
-  "sage gestion commerciale 2": "Sage Gestion N2",
-  "sage comptabilité n2": "Sage Compta N2",
-  "progiciel de gestion intégré (pgi)": "PGI/ERP",
-  "outils de communication": "Outils Com",
-  "gestion de site web (gsw)": "GSW",
-  "publication assistée par ordinateur (pao)": "PAO",
-  "html & css": "HTML/CSS",
-  "sgbdr": "SGBDR",
-  "ia et la prise de décision.": "IA",
+    /* ---- Champs ---- */
+    .imgam-label{ display:block; font-size:.72rem; font-weight:700; color:#475569; margin-bottom:5px; letter-spacing:.01em; }
+    .imgam-field{
+      width:100%; padding:.62rem .85rem; font-size:.9rem; color:#0f172a;
+      background:#fff; border:1.5px solid #e2e8f0; border-radius:12px;
+      transition:border-color .15s, box-shadow .15s, background .15s;
+    }
+    .imgam-field::placeholder{ color:#a3adba; }
+    .imgam-field:hover{ border-color:#cbd5e1; }
+    .imgam-field:focus{ outline:none; border-color:var(--navy-2); box-shadow:0 0 0 4px var(--ring); background:#fff; }
+    .imgam-field:disabled{ background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
+    select.imgam-field{
+      appearance:none; -webkit-appearance:none; padding-right:2.1rem; cursor:pointer;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right .8rem center;
+    }
+    input[type=checkbox], input[type=radio]{ accent-color:var(--navy-2); }
 
-  // Compatibilité avec les anciens libellés déjà enregistrés
-  "ciel comptabilité niveau 1": "Ciel Compta N1",
-  "ciel comptabilité niveau 2": "Ciel Compta N2",
-  "sage comptabilité niveau 1": "Sage Compta N1",
-  "sage comptabilité niveau 2": "Sage Compta N2",
-  "gestion de base des données": "GBD",
-  "progiciel de gestion intégré": "PGI/ERP",
-  "gestion de site web": "GSW",
-  "publication assistée par ordinateur": "PAO",
-  "html et css": "HTML/CSS",
-  "système de gestion de base des données relationnelles": "SGBDR",
-  "ia et la prise de décision": "IA",
-  "ia et la prise de decision": "IA"
-};
+    /* ---- Segmented control (type de demande) ---- */
+    .type-toggle{ display:inline-flex; gap:5px; padding:5px; background:#eef2f7; border:1px solid #e2e8f0; border-radius:14px; }
+    .type-toggle label{ position:relative; cursor:pointer; }
+    .type-toggle label input{ position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; }
+    .type-toggle label span{ display:block; padding:.5rem 1.15rem; border-radius:10px; font-size:.85rem; font-weight:600; color:#64748b; transition:all .2s; user-select:none; }
+    .type-toggle label:hover span{ color:#334155; }
+    .type-toggle label:has(input:checked) span{ background:#fff; color:var(--navy); box-shadow:0 2px 8px rgba(15,26,46,.14); }
 
-var CLOUD_LINKS = {
-  "Infobase":        { folderId: "1FzTWIqYvnHdn0_vePmfuHHVlKQbnlEMM", examId: "1cyjLMzYx-i1oVPxNQySwfneuJbvNaxjf", tutoDispo: true, examDispo: true },
-  "Ciel Compta N1":  { folderId: "11CcDPiJB57m_eIAzMrK5svm55vWl20S6", examId: null, tutoDispo: true, examDispo: false },
-  "Ciel Compta N2":  { folderId: "11lbSwzPee-xZGaMmXRGArgPmtij5yQOk", examId: null, tutoDispo: true, examDispo: false },
-  "Sage Compta N1":  { folderId: "1H6qs9Enea0KhLkW4boR5ccahtSxKdsP8", examId: "1njEKNC00OFQJWNx3bnROOgK0miRMqUEr", tutoDispo: true, examDispo: true },
-  "Sage Compta N2":  { folderId: "1H5ANUv8Tv-T9FsVMoMcbQ3aAw3JY8P1B", examId: "1d62PIpkQp_-Lj7gGOq3D2hRNvIbChoQh", tutoDispo: true, examDispo: true },
-  "Sage Gestion N1": { folderId: "11CqJzdCa6yrh4ijCpmTVK6XV9dwA0iOi", examId: "1dknQa-L4neULp8pgAD8WHw5gY1VVXj18", tutoDispo: true, examDispo: true },
-  "Sage Gestion N2": { folderId: "1GBKuQ33rpw0ZPdjHFhgUYXwfibr5c6Al", examId: "1dpJJX-BSHTqkGmWs-t-szIdKxdtpuG3E", tutoDispo: true, examDispo: true },
-  "GBD":             { folderId: "118oIycpvJ5L1216ad4nwCztCRiBH9Uqr", examId: "1oTkCHpHvOT3gaQIC7EyERTmqRSu54GKW", tutoDispo: true, examDispo: true },
-  "PGI/ERP":         { folderId: "11Ii-lEIV_q3dX56PUmNGPnlJqopprBnG", examId: "1o4i_zBQ6AIXI99DWZA_TkshD9aEnH1yg", tutoDispo: true, examDispo: true },
-  "Outils Com":      { folderId: "1H6zhSSRUz_lRxW9ohfzNosoAUCz4j4OC", examId: "1oEk245PIeyUHCZR8jrD6MqWohKsM5JDT", tutoDispo: true, examDispo: true },
-  "GSW":             { folderId: "1Fzdi_NrgC150EasfBJypEwz1_CU28adm", examId: "1odeAHHF3A_fRK7yUh3U1PLhu0R7CNYMM", tutoDispo: true, examDispo: true },
-  "PAO":             { folderId: "11EzkicM_x9wgTGObADLQLbrbDNv_QFMA", examId: "1ngT3BzqJOEWkAPlvCPs_bLKrBDiBXUlU", tutoDispo: true, examDispo: true },
-  "HTML/CSS":        { folderId: "1Gl4riT8jEoCPV8_FIsVam6RskQvZzO_e", examId: "1pAtBTxZpw14O0W9Vjr_em6eFO6WJAe1e", tutoDispo: true, examDispo: true },
-  "SGBDR":           { folderId: "1GgkExvI4m2wcKQbjuTsj1pAzCHflhgWH", examId: "1oW9qLvOq1KmlKqE1i3JwJIU2u8OkrB-w", tutoDispo: true, examDispo: true },
-  "IA":              { folderId: null, examId: "13AR9_S0iKaakQuDGgwAnckjvkdoxpl3U", tutoDispo: false, examDispo: true }
-};
+    /* ---- Compteur ---- */
+    .counter-pill{ font-size:.72rem; font-weight:700; color:#334155; background:#f1f5f9; border:1px solid #e2e8f0; padding:4px 11px; border-radius:999px; }
 
-// ============================================================
-// CONFIGURATION SENSIBLE
-// ============================================================
-function getProp_(name) {
-  var v = PropertiesService.getScriptProperties().getProperty(name);
-  if (!v) throw new Error("Configuration manquante : propriété '" + name + "' non définie dans le script.");
-  return v;
-}
-function getAdminPassword() { return getProp_('ADMIN_PASSWORD'); }
+    /* ---- Liste des matières ---- */
+    #matieres-container{ scrollbar-width:thin; scrollbar-color:#cbd5e1 transparent; }
+    #matieres-container::-webkit-scrollbar{ width:8px; }
+    #matieres-container::-webkit-scrollbar-thumb{ background:#cbd5e1; border-radius:999px; }
+    #matieres-container > label{
+      border:1.5px solid #e5e7eb !important; border-radius:12px !important;
+      background:#fff !important; transition:border-color .15s, box-shadow .15s, background .15s;
+    }
+    #matieres-container > label:hover{ border-color:#c7d2fe !important; box-shadow:0 2px 8px -4px rgba(15,26,46,.15); }
+    #matieres-container > label:has(input:checked){ border-color:var(--navy-2) !important; background:#eff6ff !important; box-shadow:0 2px 10px -4px rgba(30,58,95,.28); }
 
-// ============================================================
-// SESSIONS ADMIN (durables) + RATE-LIMIT LOGIN
-// ============================================================
-var SESSION_TTL_MS = 3600 * 1000; // 1 heure
+    /* ---- Encarts d'information ---- */
+    .payment-info { background:#f8fafc; border-radius:16px; padding:18px; border:1px solid #e9eef4; }
+    .payment-info .row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; font-size:14px; border-bottom:1px dashed #e5e9f0; }
+    .payment-info .row:last-child{ border-bottom:none; }
+    .payment-info--mvola{ background:linear-gradient(160deg,#ecfdf5,#f0fdfa); border:1px solid #a7f3d0; }
+    .payment-info--mvola .row{ border-bottom-color:#c9f0dd; }
+    .matiere-item { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed #e5e9f0; font-size:14px; }
+    .matiere-item:last-child { border-bottom:none; }
+    .support-link { color:var(--emerald-2); text-decoration:none; font-weight:700; border-bottom:1.5px solid rgba(4,120,87,.35); }
+    .support-link:hover{ border-bottom-color:var(--emerald-2); }
 
-function genererTokenSession() {
-  var token = Utilities.getUuid();
-  var lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    var props = PropertiesService.getScriptProperties();
-    var sessions = JSON.parse(props.getProperty('SESSIONS') || '{}');
-    var now = new Date().getTime();
-    for (var k in sessions) { if (sessions[k] < now) delete sessions[k]; } // purge
-    sessions[token] = now + SESSION_TTL_MS;
-    props.setProperty('SESSIONS', JSON.stringify(sessions));
-  } finally { lock.releaseLock(); }
-  return token;
-}
+    /* ---- Boutons ---- */
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:.45rem;
+      font-weight:700; font-size:.95rem; padding:.8rem 1.1rem; border-radius:14px; border:none; cursor:pointer;
+      transition:transform .15s ease, box-shadow .2s ease, background .2s ease, opacity .2s ease;
+    }
+    .btn:hover{ transform:translateY(-1px); }
+    .btn:active{ transform:translateY(0) scale(.99); }
+    .btn:disabled{ transform:none; cursor:not-allowed; opacity:.55; box-shadow:none; }
+    .btn-primary{ color:#fff; background:linear-gradient(135deg,var(--navy-2),var(--navy)); box-shadow:0 10px 22px -10px rgba(15,26,46,.6); }
+    .btn-primary:hover{ box-shadow:0 14px 26px -10px rgba(15,26,46,.7); }
+    .btn-success{ color:#fff; background:linear-gradient(135deg,#10b981,var(--emerald-2)); box-shadow:0 10px 22px -10px rgba(5,150,105,.6); }
+    .btn-success:hover{ box-shadow:0 14px 26px -10px rgba(5,150,105,.7); }
+    .btn-ghost{ color:#475569; background:#f1f5f9; border:1px solid #e2e8f0; font-size:.88rem; padding:.62rem 1rem; }
+    .btn-ghost:hover{ background:#e8edf3; color:#334155; }
 
-function validerTokenSession(token) {
-  if (!token) return false;
-  var props = PropertiesService.getScriptProperties();
-  var sessions = JSON.parse(props.getProperty('SESSIONS') || '{}');
-  var exp = sessions[token];
-  return !!exp && exp >= new Date().getTime();
-}
+    /* ---- Écran de succès ---- */
+    .success-pop{ animation:pop .5s cubic-bezier(.2,.8,.3,1.2); }
+    @keyframes pop{ 0%{ transform:scale(.4); opacity:0; } 60%{ transform:scale(1.12); } 100%{ transform:scale(1); opacity:1; } }
+  </style>
+</head>
+<body class="p-4 min-h-screen flex items-center justify-center">
+<div class="imgam-card rounded-3xl max-w-2xl w-full p-6 md:p-9">
 
-function loginAutorise() {
-  var fails = parseInt(CacheService.getScriptCache().get('login_fails') || '0', 10);
-  return fails < 8; // 8 échecs / 15 min
-}
-function enregistrerEchecLogin() {
-  var cache = CacheService.getScriptCache();
-  var fails = parseInt(cache.get('login_fails') || '0', 10) + 1;
-  cache.put('login_fails', String(fails), 900);
-}
-function resetEchecLogin() { CacheService.getScriptCache().remove('login_fails'); }
+  <div class="text-center mb-7">
+    <h1 class="text-2xl md:text-3xl"><span aria-hidden="true">🎓</span> <span class="imgam-title">Portail IMGAM</span></h1>
+    <p class="text-slate-500 text-sm mt-1">Commande de tutoriels et sujets d'examen</p>
+    <span id="session-badge" class="badge mt-3" style="display:none;"></span>
+  </div>
 
-// ============================================================
-// INITIALISATION DES FEUILLES
-// ============================================================
-function initialiserFeuilles() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var feuilles = [
-    { nom: FEUILLES.stats, enTete: ["Date", "Envoyés_Admin", "Envoyés_Etudiants", "Total"] },
-    { nom: FEUILLES.logs, enTete: ["Timestamp", "Contexte", "Erreur", "Données"] },
-    { nom: FEUILLES.config, enTete: ["Clé", "Valeur"] }
+  <!-- Indicateur d'étapes -->
+  <div class="step-indicator">
+    <div class="step-dot active" data-step="1"><div class="circle">1</div><span class="label">Matières</span></div>
+    <div class="step-dot" data-step="2"><div class="circle">2</div><span class="label">Paiement</span></div>
+    <div class="step-dot" data-step="3"><div class="circle">3</div><span class="label">Référence</span></div>
+    <div class="step-dot" data-step="4"><div class="circle">4</div><span class="label">Confirmation</span></div>
+  </div>
+
+  <!-- ÉTAPE 1 -->
+  <div id="step1" class="step-content active">
+    <h2 class="sec-title mb-2"><span class="ic">📚</span> Sélectionnez vos matières</h2>
+    <p class="text-sm text-slate-500 mb-5">Choisissez 1 à 3 matières. Tarif : <strong class="text-sky-800">6 500 Ar</strong> par matière.</p>
+    <div class="mb-5">
+      <label class="imgam-label">Type de demande</label>
+      <div class="type-toggle">
+        <label><input type="radio" name="typeCommande" value="tutoriel" checked><span>📘 Tutoriel</span></label>
+        <label><input type="radio" name="typeCommande" value="examen"><span>📝 Examen</span></label>
+      </div>
+      <div id="periode-info" class="mt-3 text-xs rounded-lg px-3 py-2" style="display:none;"></div>
+    </div>
+    <div class="mb-5">
+      <div class="flex justify-between items-center">
+        <span class="text-sm font-semibold text-slate-700">Matières disponibles</span>
+        <span id="counter" class="counter-pill">0 / 3</span>
+      </div>
+      <p class="text-xs text-slate-500 mt-1">Choisissez d’abord votre grade et votre niveau, puis cochez les matières souhaitées.</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+        <div>
+          <label for="grade-select" class="imgam-label">Grade</label>
+          <select id="grade-select" class="imgam-field">
+            <option value="">— Sélectionnez le grade —</option>
+          </select>
+        </div>
+        <div>
+          <label for="niveau-select" class="imgam-label">Niveau</label>
+          <select id="niveau-select" class="imgam-field" disabled>
+            <option value="">— Sélectionnez d’abord le grade —</option>
+          </select>
+        </div>
+      </div>
+      <div id="selection-resume" class="mt-3 text-xs rounded-xl px-3 py-2 bg-sky-50 text-sky-900 border border-sky-100" style="display:none;"></div>
+      <div id="matieres-container" class="grid grid-cols-1 gap-2 mt-3 max-h-64 overflow-y-auto p-2 rounded-xl bg-slate-50/70 border border-slate-200"><p class="text-sm text-slate-400 p-2">Sélectionnez un grade puis un niveau.</p></div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+      <div><label class="imgam-label">N° Matricule <span class="text-red-500">*</span></label><input type="text" id="matricule" required placeholder="Ex: 49000 ou FM-5000" class="imgam-field"></div>
+      <div><label class="imgam-label">WhatsApp <span class="text-red-500">*</span></label><input type="tel" id="whatsapp" required placeholder="Votre N° WhatsApp" class="imgam-field"></div>
+    </div>
+    <div class="mt-3"><label class="imgam-label">Email <span class="text-red-500">*</span> <span class="font-normal text-slate-400 lowercase tracking-normal">(compte Google obligatoire pour l'accès Drive)</span></label><input type="email" id="email" required placeholder="nom@gmail.com" class="imgam-field"></div>
+    <button id="btn-to-step2" class="btn btn-primary w-full mt-5">Continuer →</button>
+    <div id="status-step1" class="mt-3 text-sm hidden"></div>
+  </div>
+
+  <!-- ÉTAPE 2 -->
+  <div id="step2" class="step-content">
+    <h2 class="sec-title mb-4"><span class="ic">💳</span> Récapitulatif et paiement</h2>
+    <div id="recap-content" class="payment-info mb-4"></div>
+    <div class="payment-info payment-info--mvola mb-5">
+      <h3 class="font-bold text-emerald-800 text-sm mb-2 flex items-center gap-2">📲 Informations de paiement MVola</h3>
+      <div class="row"><span class="text-slate-600">Numéro MVola :</span> <strong class="text-emerald-900 tracking-wide">034 16 948 39</strong></div>
+      <div class="row"><span class="text-slate-600">Bénéficiaire :</span> <strong class="text-emerald-900">IMGAM</strong></div>
+      <div class="row"><span class="text-slate-600">Tarif :</span> <strong class="text-emerald-900">6 500 Ar / matière</strong></div>
+      <div class="row"><span class="text-slate-600">Montant exact :</span> <strong class="text-emerald-900 text-base" id="montant-exact">0 Ar</strong></div>
+      <div class="row"><span class="text-slate-600">Délai de traitement :</span> <strong class="text-emerald-900">Moins de 5 minutes</strong></div>
+      <div class="row"><span class="text-slate-600">Support :</span> <a href="https://wa.me/261341694839" target="_blank" class="support-link">+261 34 169 48 39</a></div>
+    </div>
+    <button id="btn-to-step3" class="btn btn-success w-full">J'ai effectué le paiement →</button>
+    <button class="btn btn-ghost w-full mt-2" onclick="goToStep(1)">← Modifier</button>
+  </div>
+
+  <!-- ÉTAPE 3 -->
+  <div id="step3" class="step-content">
+    <h2 class="sec-title mb-2"><span class="ic">🔑</span> Saisissez la référence MVola</h2>
+    <p class="text-sm text-slate-500 mb-5">Entrez la référence reçue par SMS après votre paiement.</p>
+    <div><label class="imgam-label">Référence MVola <span class="font-normal text-slate-400 tracking-normal">(10 chiffres)</span></label><input type="text" id="ref-paiement" inputmode="numeric" maxlength="10" placeholder="Ex: 2370867180" class="imgam-field font-mono text-lg text-center tracking-[.35em]"></div>
+    <button id="btn-verifier" class="btn btn-success w-full mt-4">Vérifier mon paiement</button>
+    <div id="paiement-status" class="mt-3 text-sm"></div>
+    <button class="btn btn-ghost w-full mt-2" onclick="goToStep(2)">← Retour</button>
+  </div>
+
+  <!-- ÉTAPE 4 -->
+  <div id="step4" class="step-content text-center py-6">
+    <div class="text-6xl mb-4 success-pop">🎉</div>
+    <h2 class="text-2xl font-extrabold text-emerald-700">Commande validée !</h2>
+    <p class="text-slate-600 mb-5">Vos accès ont été envoyés par email.</p>
+    <div class="payment-info payment-info--mvola text-left text-sm mb-5"><p><strong class="text-slate-700">N° de commande :</strong> <span id="final-commande-id" class="font-mono text-emerald-800">—</span></p></div>
+    <button onclick="location.reload()" class="btn btn-primary mx-auto px-7">Nouvelle commande</button>
+  </div>
+
+  <!-- Protection des données -->
+  <div class="mt-8 pt-6 border-t border-slate-200 text-xs text-slate-500 space-y-2">
+    <p>📋 <strong class="text-slate-600">Protection de vos données</strong><br>Les informations fournies sont utilisées uniquement pour vérifier votre demande, transmettre vos accès et assurer le suivi administratif.</p>
+    <p>⏳ <strong class="text-slate-600">Durée de conservation :</strong> Pendant la durée de la formation, puis archivage légal.</p>
+    <p>📧 <strong class="text-slate-600">Contact :</strong> <a href="mailto:jakobazakasoa@gmail.com" class="text-sky-700 underline">jakobazakasoaharijean@gmail.com</a> ou <a href="https://wa.me/261341694839" target="_blank" class="text-sky-700 underline">034 16 948 39</a>.</p>
+  </div>
+</div>
+
+<script>
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwReJffIptwkKou4qK8vaIYoVRIAPR9QH7yENyhtjJE_QCRejAd-8v1ExA_Z8lwdIvmJg/exec";
+  const TARIF = 6500;
+  let matieresDisponibles = [], matieresSelectionnees = [], typeCommande = 'tutoriel';
+  let commandeId = null; // ID retourné par le backend après création
+  let appConfig = {};    // paramètres (vague active, périodes) lus depuis la feuille Config
+
+  // Charge la vague active + les périodes et met à jour l'affichage
+  function chargerConfig(){
+    fetch(WEB_APP_URL + '?action=getPublicConfig').then(r=>r.json()).then(cfg=>{
+      appConfig = cfg || {};
+      const vague = appConfig.Vague_Active;
+      const badge = document.getElementById('session-badge');
+      if(vague){ badge.textContent = 'Session : ' + vague; badge.style.display = 'inline-block'; }
+      afficherPeriode();
+    }).catch(()=>{});
+  }
+
+  function dansPeriode(debut, fin){
+    if(!debut || !fin) return true;
+    const toDate = (s, suffixe) => {
+      s = String(s);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(s)) s = s + suffixe; // ajoute l'heure si date seule
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    };
+    const d0 = toDate(debut, 'T00:00:00'), d1 = toDate(fin, 'T23:59:59');
+    if(!d0 || !d1) return true;
+    const now = new Date();
+    return now >= d0 && now <= d1;
+  }
+
+  // Affiche la période du type sélectionné et bloque le bouton si fermé
+  function afficherPeriode(){
+    const t = (document.querySelector('input[name="typeCommande"]:checked')||{}).value || 'tutoriel';
+    const pref = (t === 'examen') ? 'Examen' : 'Tuto';
+    const debut = appConfig[pref+'_Debut'], fin = appConfig[pref+'_Fin'];
+    const info = document.getElementById('periode-info');
+    const btn = document.getElementById('btn-to-step2');
+    if(!debut || !fin){ info.style.display='none'; btn.disabled=false; btn.classList.remove('opacity-50','cursor-not-allowed'); return; }
+    const fmt = s => {
+      if(!s) return ''; s = String(s);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.split('-').reverse().join('-');
+      const d = new Date(s);
+      if(!isNaN(d.getTime())) return String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();
+      return s;
+    };
+    info.style.display='block';
+    if(dansPeriode(debut, fin)){
+      info.className='mt-2 text-xs rounded-lg px-3 py-2 bg-emerald-50 text-emerald-800';
+      info.textContent='✅ Demandes ouvertes du '+fmt(debut)+' au '+fmt(fin)+'.';
+      btn.disabled=false; btn.classList.remove('opacity-50','cursor-not-allowed');
+    } else {
+      info.className='mt-2 text-xs rounded-lg px-3 py-2 bg-red-50 text-red-700';
+      info.textContent='⛔ Demandes fermées. Période autorisée : du '+fmt(debut)+' au '+fmt(fin)+'.';
+      btn.disabled=true; btn.classList.add('opacity-50','cursor-not-allowed');
+    }
+  }
+
+  // Échappement HTML pour les valeurs saisies par l'utilisateur
+  function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // POST sans préflight CORS (Content-Type text/plain accepté par Apps Script)
+  function apiPost(payload){
+    return fetch(WEB_APP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) }).then(r=>r.json());
+  }
+
+  function goToStep(s) { document.querySelectorAll('.step-content').forEach(el=>el.classList.remove('active')); document.getElementById('step'+s).classList.add('active'); document.querySelectorAll('.step-dot').forEach(d=>{let n=parseInt(d.dataset.step); d.classList.remove('active','completed'); if(n===s)d.classList.add('active'); else if(n<s)d.classList.add('completed');}); }
+
+  // ============================================================
+  // MATIÈRES DISPONIBLES — Grade et niveau
+  // ============================================================
+  // Cette liste est la seule partie personnalisée du formulaire.
+  // « IA et la prise de décision » est disponible uniquement pour les examens.
+  const MATIERES_PAR_NIVEAU = [
+    {
+      grade: 'Grade Licence',
+      niveaux: [
+        { niveau: 'Niveau L1', matieres: [
+          { nom: 'Informatique de base' }
+        ]},
+        { niveau: 'Niveau L2', matieres: [
+          { nom: 'Gestion de base de données' },
+          { nom: 'Sage Gestion Commerciale 1' },
+          { nom: 'Sage Comptabilité N1' }
+        ]},
+        { niveau: 'Niveau L3', matieres: [
+          { nom: 'Sage Gestion Commerciale 2' },
+          { nom: 'Sage Comptabilité N2' },
+          { nom: 'Progiciel de gestion intégré (PGI)' },
+          { nom: 'Outils de communication' },
+          { nom: 'Gestion de site Web (GSW)' }
+        ]}
+      ]
+    },
+    {
+      grade: 'Grade Master',
+      niveaux: [
+        { niveau: 'Niveau M1', matieres: [
+          { nom: 'Publication Assistée par Ordinateur (PAO)' },
+          { nom: 'HTML & CSS' },
+          { nom: 'SGBDR' }
+        ]},
+        { niveau: 'Niveau M2', matieres: [
+          { nom: 'IA et la prise de décision.', tutoriel: false, examen: true }
+        ]}
+      ]
+    }
   ];
 
-  var formSheet = ss.getSheetByName(FEUILLES.formulaire);
-  if (!formSheet) {
-    formSheet = ss.insertSheet(FEUILLES.formulaire);
-    formSheet.appendRow(["Timestamp", "Date", "WhatsApp", "Motif", "Matières", "Numéro", "Vague", "Réf MVola", "Email", "Statut", "Numéro Demande"]);
-    formSheet.getRange(1, 1, 1, 11).setFontWeight("bold").setBackground("#1f4e79").setFontColor("white");
-  }
-
-  var smsSheet = ss.getSheetByName(FEUILLES.sms);
-  if (!smsSheet) { smsSheet = ss.insertSheet(FEUILLES.sms); smsSheet.appendRow(["Timestamp", "Expéditeur", "Message"]); smsSheet.getRange(1,1,1,3).setFontWeight("bold").setBackground("#1f4e79").setFontColor("white"); }
-
-  var mvolaSheet = ss.getSheetByName(FEUILLES.mvolaRecu);
-  if (!mvolaSheet) {
-    mvolaSheet = ss.insertSheet(FEUILLES.mvolaRecu);
-    mvolaSheet.appendRow(["Montant_reçu", "Nom_Etudiant", "Numero_téléphone", "Date_Envoi", "hh:mm", "Motif", "Montant_Solde", "Numero_Ref"]);
-    mvolaSheet.getRange(1,1,1,8).setFontWeight("bold").setBackground("#1f4e79").setFontColor("white");
-  }
-
-  var histSheet = ss.getSheetByName(FEUILLES.historique);
-  if (!histSheet) {
-    histSheet = ss.insertSheet(FEUILLES.historique);
-    histSheet.appendRow(["Date", "Destinataire", "Matières", "Type", "Statut", "Numéro d'inscription", "Vague"]);
-    histSheet.getRange(1,1,1,7).setFontWeight("bold").setBackground("#1f4e79").setFontColor("white");
-  }
-
-  // Commandes (avec Email + Type)
-  var enTeteCmd = ["ID Commande", "Matricule", "WhatsApp", "Email", "Type", "Matières", "Montant", "Statut", "Réf MVola", "Date Création", "Date Paiement"];
-  var cmdSheet = ss.getSheetByName(FEUILLES.commandes);
-  if (!cmdSheet) {
-    cmdSheet = ss.insertSheet(FEUILLES.commandes);
-    cmdSheet.appendRow(enTeteCmd);
-    cmdSheet.getRange(1,1,1,enTeteCmd.length).setFontWeight("bold").setBackground("#1f4e79").setFontColor("white");
-  } else {
-    var h = cmdSheet.getRange(1, 1, 1, Math.max(1, cmdSheet.getLastColumn())).getValues()[0];
-    if (h.indexOf("Email") === -1 || h.indexOf("Type") === -1) {
-      if (cmdSheet.getLastRow() <= 1) { // vide : on peut recréer l'en-tête
-        cmdSheet.clear();
-        cmdSheet.appendRow(enTeteCmd);
-        cmdSheet.getRange(1,1,1,enTeteCmd.length).setFontWeight("bold").setBackground("#1f4e79").setFontColor("white");
-      } else {
-        Logger.log("⚠️ Feuille 'Commandes' obsolète (sans Email/Type). Sauvegardez puis recréez-la.");
-      }
-    }
-  }
-
-  feuilles.forEach(function(f) {
-    var sheet = ss.getSheetByName(f.nom);
-    if (!sheet) { sheet = ss.insertSheet(f.nom); sheet.appendRow(f.enTete); sheet.getRange(1,1,1,f.enTete.length).setFontWeight("bold").setBackground("#1f4e79").setFontColor("white"); }
-  });
-
-  var configSheet = ss.getSheetByName(FEUILLES.config);
-  if (configSheet.getLastRow() < 2) {
-    configSheet.appendRow(["Vague_Active", "Vague 1"]);
-    configSheet.appendRow(["Tuto_Debut", "2026-01-01"]);
-    configSheet.appendRow(["Tuto_Fin", "2026-12-31"]);
-    configSheet.appendRow(["Examen_Debut", "2026-01-01"]);
-    configSheet.appendRow(["Examen_Fin", "2026-12-31"]);
-  }
-}
-
-function onOpen() {
-  initialiserFeuilles();
-  SpreadsheetApp.getUi().createMenu("✅ IMGAM Suite").addItem("Vérifier paiements", "verifierPaiementsEnAttente").addToUi();
-}
-
-// ============================================================
-// IDENTIFIANTS
-// ============================================================
-function genererIdCommande() {
-  var now = new Date();
-  var annee = now.getFullYear();
-  var mois = String(now.getMonth() + 1).padStart(2, '0');
-  var jour = String(now.getDate()).padStart(2, '0');
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.commandes);
-  if (!sheet) return "CMD-" + annee + mois + jour + "-001";
-  var data = sheet.getDataRange().getValues();
-  var count = 0;
-  for (var i = 1; i < data.length; i++) {
-    var rowDate = new Date(data[i][COLS_CMD.dateCreation - 1]);
-    if (rowDate.getFullYear() === annee && rowDate.getMonth() === now.getMonth() && rowDate.getDate() === now.getDate()) count++;
-  }
-  return "CMD-" + annee + mois + jour + "-" + String(count + 1).padStart(3, '0');
-}
-
-function genererNumeroDemande() {
-  var annee = new Date().getFullYear();
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.formulaire);
-  if (!sheet) return "IMGAM-" + annee + "-00001";
-  var data = sheet.getDataRange().getValues();
-  var count = 0;
-  for (var i = 1; i < data.length; i++) { if (new Date(data[i][0]).getFullYear() === annee) count++; }
-  return "IMGAM-" + annee + "-" + String(count + 1).padStart(5, '0');
-}
-
-// ============================================================
-// MATIÈRES
-// ============================================================
-function normaliserMatiere(m) {
-  var mm = (m || '').toLowerCase().trim();
-  for (var key in MATIERE_MAP) { if (mm.indexOf(key) !== -1) return MATIERE_MAP[key]; }
-  return m;
-}
-
-function getMatieresDisponibles(type) {
-  var result = [];
-  var keys = Object.keys(CLOUD_LINKS);
-  for (var i = 0; i < keys.length; i++) {
-    var data = CLOUD_LINKS[keys[i]];
-    if (type === "tutoriel" && data.tutoDispo) result.push(keys[i]);
-    else if (type === "examen" && data.examDispo) result.push(keys[i]);
-  }
-  return result;
-}
-
-function verifierMatieresDisponibles(matieres, type) {
-  var indisponibles = [];
-  for (var i = 0; i < matieres.length; i++) {
-    var data = CLOUD_LINKS[matieres[i]];
-    if (!data) { indisponibles.push(matieres[i] + " (inconnue)"); continue; }
-    if (type === "tutoriel" && !data.tutoDispo) indisponibles.push(matieres[i] + " (tutoriel indisponible)");
-    else if (type === "examen" && !data.examDispo) indisponibles.push(matieres[i] + " (examen indisponible)");
-  }
-  return indisponibles;
-}
-
-// ============================================================
-// PARAMÈTRES (feuille Config) : vague active + périodes d'ouverture
-// ============================================================
-function getConfigValeur_(cle, defaut) {
-  var cfg = lireConfig();
-  return (cfg[cle] !== undefined && cfg[cle] !== '') ? cfg[cle] : defaut;
-}
-
-function getVagueActive_() {
-  return getConfigValeur_('Vague_Active', 'Vague 1').toString();
-}
-
-// Formate "aaaa-mm-jj" → "jj-mm-aaaa" (laisse la valeur telle quelle sinon)
-function fmtDateFr_(s) {
-  s = (s || '').toString();
-  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s.split('-').reverse().join('-') : s;
-}
-
-// Lève une erreur si la date du jour est hors de la période autorisée pour le type
-function verifierPeriodeOuverte_(type) {
-  var cfg = lireConfig();
-  var prefixe = (type === 'examen') ? 'Examen' : 'Tuto';
-  var debut = cfg[prefixe + '_Debut'];
-  var fin = cfg[prefixe + '_Fin'];
-  if (!debut || !fin) return; // aucune restriction si non configuré
-  var d0 = new Date(debut.toString() + 'T00:00:00');
-  var d1 = new Date(fin.toString() + 'T23:59:59');
-  if (isNaN(d0.getTime()) || isNaN(d1.getTime())) return;
-  var now = new Date();
-  if (now < d0 || now > d1) {
-    var libelle = (type === 'examen') ? "sujets d'examen" : "tutoriels";
-    throw new Error("Les demandes de " + libelle + " sont actuellement fermées. Période autorisée : du " + fmtDateFr_(debut) + " au " + fmtDateFr_(fin) + ".");
-  }
-}
-
-// ============================================================
-// CRÉATION D'UNE COMMANDE (Étape 1 → 2)
-// ============================================================
-function creerCommande(matricule, whatsapp, email, matieres, type) {
-  matricule = (matricule || '').toString().trim();
-  whatsapp  = (whatsapp  || '').toString().trim();
-  email     = (email     || '').toString().trim();
-  type      = (type === 'examen') ? 'examen' : 'tutoriel';
-  matieres  = (matieres || []).filter(function(m){ return m && m.toString().trim() !== ''; });
-
-  if (!matricule || !whatsapp || !email || !matieres.length) throw new Error("Veuillez remplir tous les champs obligatoires.");
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Adresse email invalide.");
-  if (matieres.length > 3) throw new Error("Maximum 3 matières par commande.");
-
-  verifierPeriodeOuverte_(type); // bloque si hors période d'ouverture
-
-  matieres = matieres.map(normaliserMatiere);
-  var indisponibles = verifierMatieresDisponibles(matieres, type);
-  if (indisponibles.length > 0) throw new Error("Matières indisponibles : " + indisponibles.join(", "));
-
-  var lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  try {
-    var cmdId = genererIdCommande();
-    var montant = matieres.length * CONFIG.tarifParMatiere;
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.commandes);
-    sheet.appendRow([cmdId, matricule, whatsapp, email, type, matieres.join(", "), montant, "En attente", "", new Date(), ""]);
-    SpreadsheetApp.flush();
-    return { commandeId: cmdId, montant: montant };
-  } finally { lock.releaseLock(); }
-}
-
-// ============================================================
-// DISTRIBUTION DES SUJETS D'EXAMEN DEPUIS UN TUTORIEL DÉJÀ PAYÉ
-// ------------------------------------------------------------
-// L'étudiant ne ressaisit pas sa référence MVola. Le serveur retrouve
-// automatiquement une commande de tutoriel déjà payée pour chaque matière,
-// à partir du matricule et d'au moins une coordonnée concordante
-// (email ou WhatsApp), puis envoie directement le sujet d'examen.
-// ============================================================
-function normaliserMatricule_(valeur) {
-  return (valeur || '').toString().trim().toUpperCase().replace(/\s+/g, '');
-}
-
-function normaliserEmail_(valeur) {
-  return (valeur || '').toString().trim().toLowerCase();
-}
-
-function normaliserTelephone_(valeur) {
-  var numero = (valeur || '').toString().replace(/[^0-9]/g, '');
-  // Rend équivalents 0341234567 et 261341234567.
-  if (numero.indexOf('261') === 0 && numero.length === 12) numero = '0' + numero.substring(3);
-  return numero;
-}
-
-function matieresDeCommande_(valeur) {
-  return (valeur || '').toString().split(/[,;]\s*/).filter(function(m) {
-    return m && m.toString().trim() !== '';
-  }).map(normaliserMatiere);
-}
-
-function obtenirSujetExamenDepuisTutorielPaye(matricule, whatsapp, email, matieres) {
-  matricule = (matricule || '').toString().trim();
-  whatsapp  = (whatsapp || '').toString().trim();
-  email     = (email || '').toString().trim();
-  matieres  = (matieres || []).filter(function(m) { return m && m.toString().trim() !== ''; });
-
-  if (!matricule || !whatsapp || !email || !matieres.length) {
-    return { status: 'error', message: 'Veuillez remplir tous les champs obligatoires.' };
-  }
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    return { status: 'error', message: 'Adresse email invalide.' };
-  }
-  if (matieres.length > 3) {
-    return { status: 'error', message: 'Maximum 3 matières par demande.' };
-  }
-
-  try {
-    verifierPeriodeOuverte_('examen');
-  } catch (ePeriode) {
-    return { status: 'error', message: ePeriode.message || ePeriode.toString() };
-  }
-
-  // Normalisation + suppression des doublons sans modifier l'ordre choisi.
-  var uniques = [];
-  matieres.map(normaliserMatiere).forEach(function(m) {
-    if (uniques.indexOf(m) === -1) uniques.push(m);
-  });
-  matieres = uniques;
-
-  var indisponibles = verifierMatieresDisponibles(matieres, 'examen');
-  if (indisponibles.length > 0) {
-    return { status: 'error', message: 'Matières indisponibles : ' + indisponibles.join(', ') };
-  }
-
-  var matriculeRecherche = normaliserMatricule_(matricule);
-  var emailRecherche = normaliserEmail_(email);
-  var referencesParMatiere = {};
-  var manquantes = [];
-  var commandeId = '';
-
-  var lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName(FEUILLES.commandes);
-    if (!sheet) return { status: 'error', message: 'Système indisponible.' };
-    var data = sheet.getDataRange().getValues();
-
-    // Recherche de la commande de tutoriel payée la plus récente pour chaque matière.
-    for (var m = 0; m < matieres.length; m++) {
-      var matiereDemandee = matieres[m];
-      var trouvee = false;
-
-      for (var i = data.length - 1; i >= 1; i--) {
-        var typeLigne = (data[i][COLS_CMD.type - 1] || '').toString().trim().toLowerCase();
-        var statutLigne = (data[i][COLS_CMD.statut - 1] || '').toString();
-        if (typeLigne !== 'tutoriel' || !statutPaye_(statutLigne)) continue;
-
-        var memeMatricule = normaliserMatricule_(data[i][COLS_CMD.matricule - 1]) === matriculeRecherche;
-        var memeEmail = normaliserEmail_(data[i][COLS_CMD.email - 1]) === emailRecherche;
-        // Le rapprochement repose uniquement sur le matricule + l'adresse e-mail.
-        // Le champ WhatsApp est conservé dans les données pour compatibilité avec l'interface existante,
-        // mais il n'intervient plus dans le système de vérification.
-        if (!memeMatricule || !memeEmail) continue;
-
-        var matieresPayees = matieresDeCommande_(data[i][COLS_CMD.matieres - 1]);
-        if (matieresPayees.indexOf(matiereDemandee) === -1) continue;
-
-        referencesParMatiere[matiereDemandee] = (data[i][COLS_CMD.refMvola - 1] || '').toString().trim();
-        trouvee = true;
-        break;
-      }
-
-      if (!trouvee) manquantes.push(matiereDemandee);
-    }
-
-    if (manquantes.length > 0) {
-      return {
-        status: 'error',
-        code: 'tutoriel_non_paye',
-        message: 'Aucun paiement de tutoriel validé n’a été trouvé pour : ' + manquantes.join(', ') + '. Effectuez d’abord le paiement du tutoriel correspondant, puis choisissez de nouveau « Examen ».'
-      };
-    }
-
-    var refs = [];
-    matieres.forEach(function(mat) {
-      var ref = referencesParMatiere[mat];
-      if (ref && refs.indexOf(ref) === -1) refs.push(ref);
-    });
-
-    // Cette ligne conserve la traçabilité de la distribution sans créer
-    // un second paiement : montant = 0 et référence reprise automatiquement.
-    commandeId = genererIdCommande();
-    sheet.appendRow([
-      commandeId, matricule, whatsapp, email, 'examen', matieres.join(', '), 0,
-      'Examen envoyé', refs.join(', '), new Date(), new Date()
-    ]);
-    SpreadsheetApp.flush();
-  } finally {
-    lock.releaseLock();
-  }
-
-  // Envois hors verrou pour ne pas bloquer les autres étudiants.
-  envoyerAccesEtudiant(email, matieres, 'examen', commandeId);
-
-  var references = [];
-  matieres.forEach(function(mat) {
-    var ref = referencesParMatiere[mat];
-    if (ref && references.indexOf(ref) === -1) references.push(ref);
-  });
-  var refJournal = references.join(', ');
-  var numeroDemande = genererNumeroDemande();
-
-  enregistrerDemande({
-    date: new Date().toLocaleDateString('fr-FR'),
-    whatsapp: whatsapp,
-    motif: 'examen',
-    numero: matricule,
-    vague: getVagueActive_(),
-    refMvola: refJournal,
-    email: email
-  }, matieres, 'Examen envoyé', numeroDemande);
-
-
-  enregistrerHistorique(whatsapp, matieres, 'examen', 'Envoyé', matricule, getVagueActive_());
-  incrementerCompteur('etudiant');
-
-  return {
-    status: 'ok',
-    commandeId: commandeId,
-    message: 'Paiement du tutoriel retrouvé. Le sujet d’examen a été envoyé par email.'
+  // Codes internes attendus par le script Apps Script.
+  // Les étudiants voient toujours les intitulés complets ci-dessus ; seuls les codes sont transmis au serveur.
+  const CODES_MATIERES = {
+    'Informatique de base': 'Infobase',
+    'Gestion de base de données': 'GBD',
+    'Sage Gestion Commerciale 1': 'Sage Gestion N1',
+    'Sage Comptabilité N1': 'Sage Compta N1',
+    'Sage Gestion Commerciale 2': 'Sage Gestion N2',
+    'Sage Comptabilité N2': 'Sage Compta N2',
+    'Progiciel de gestion intégré (PGI)': 'PGI/ERP',
+    'Outils de communication': 'Outils Com',
+    'Gestion de site Web (GSW)': 'GSW',
+    'Publication Assistée par Ordinateur (PAO)': 'PAO',
+    'HTML & CSS': 'HTML/CSS',
+    'SGBDR': 'SGBDR',
+    'IA et la prise de décision.': 'IA'
   };
-}
 
-// ============================================================
-// VÉRIFICATION SÉCURISÉE DU PAIEMENT (Étape 3 → 4)
-// ============================================================
-function verifierPaiementCommande(commandeId, refMvola) {
-  var ref = (refMvola || '').toString().trim();
-  var id  = (commandeId || '').toString().trim();
-  if (!ref || !id) return { valide: false, message: "Référence ou commande manquante." };
-
-  // Format MVola : exactement 10 chiffres. Rejet IMMÉDIAT (pas d'attente,
-  // ne consomme pas de tentative) — cas d'une faute de frappe évidente.
-  if (!/^\d{10}$/.test(ref)) {
-    return { valide: false, statut: "ref_invalide",
-      message: "Référence invalide : la référence MVola doit comporter exactement 10 chiffres." };
+  function codeMatiere(nom){
+    return CODES_MATIERES[nom] || nom;
   }
 
-  // Rate-limit par commande
-  var cache = CacheService.getScriptCache();
-  var cleCache = "verif_" + id;
-  var tentative = parseInt(cache.get(cleCache) || "0", 10);
-  if (tentative >= 10) return { valide: false, message: "Trop de tentatives. Réessayez dans 5 minutes." };
-  cache.put(cleCache, String(tentative + 1), 300);
+  function disponiblePourType(matiere){
+    return typeCommande === 'examen' ? matiere.examen !== false : matiere.tutoriel !== false;
+  }
 
-  var wa = '', mat = '', email = '', type = 'tutoriel', montantAttendu = 0, matieresCmd = [];
+  function gradeParNom(nom){
+    return MATIERES_PAR_NIVEAU.find(g => g.grade === nom);
+  }
 
-  var lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var cmdSheet = ss.getSheetByName(FEUILLES.commandes);
-    if (!cmdSheet) return { valide: false, message: "Système indisponible." };
-    var data = cmdSheet.getDataRange().getValues();
+  function niveauParNom(grade, nom){
+    return grade ? grade.niveaux.find(n => n.niveau === nom) : null;
+  }
 
-    // Anti-rejeu : la référence ne doit pas déjà appartenir à une autre commande
-    for (var k = 1; k < data.length; k++) {
-      var rowRef = data[k][COLS_CMD.refMvola - 1].toString().trim();
-      var rowId  = data[k][COLS_CMD.idCommande - 1].toString().trim();
-      if (rowRef && rowRef === ref && rowId !== id) {
-        return { valide: false, message: "Cette référence MVola a déjà été utilisée." };
+  function nomsDisponiblesPourType(){
+    const noms = [];
+    MATIERES_PAR_NIVEAU.forEach(grade => grade.niveaux.forEach(niveau => niveau.matieres.forEach(matiere => {
+      if(disponiblePourType(matiere)) noms.push(matiere.nom);
+    })));
+    return noms;
+  }
+
+  function remplirListeGrades(){
+    const select = document.getElementById('grade-select');
+    const ancien = select.value;
+    select.innerHTML = '<option value="">— Sélectionnez le grade —</option>';
+    MATIERES_PAR_NIVEAU.forEach(grade => {
+      const option = document.createElement('option');
+      option.value = grade.grade;
+      option.textContent = grade.grade;
+      select.appendChild(option);
+    });
+    if(MATIERES_PAR_NIVEAU.some(grade => grade.grade === ancien)) select.value = ancien;
+  }
+
+  function remplirListeNiveaux(reinitialiser){
+    const grade = gradeParNom(document.getElementById('grade-select').value);
+    const select = document.getElementById('niveau-select');
+    const ancien = reinitialiser ? '' : select.value;
+    select.innerHTML = '';
+
+    if(!grade){
+      select.disabled = true;
+      select.innerHTML = '<option value="">— Sélectionnez d’abord le grade —</option>';
+      return;
+    }
+
+    select.disabled = false;
+    select.innerHTML = '<option value="">— Sélectionnez le niveau —</option>';
+    grade.niveaux.forEach(niveau => {
+      const option = document.createElement('option');
+      option.value = niveau.niveau;
+      option.textContent = niveau.niveau;
+      select.appendChild(option);
+    });
+    if(grade.niveaux.some(niveau => niveau.niveau === ancien)) select.value = ancien;
+  }
+
+  function chargerMatieres() {
+    typeCommande = document.querySelector('input[name="typeCommande"]:checked').value;
+    afficherPeriode();
+
+    // Une matière sélectionnée qui n'est pas disponible pour le nouveau type est retirée.
+    const nomsDisponibles = nomsDisponiblesPourType();
+    matieresSelectionnees = matieresSelectionnees.filter(nom => nomsDisponibles.includes(nom));
+
+    remplirListeGrades();
+    remplirListeNiveaux(false);
+    genererCheckboxes();
+    majCompteur();
+  }
+
+  function choisirGrade(){
+    remplirListeNiveaux(true);
+    genererCheckboxes();
+  }
+
+  function choisirNiveau(){
+    genererCheckboxes();
+  }
+
+  function genererCheckboxes() {
+    const c = document.getElementById('matieres-container');
+    const grade = gradeParNom(document.getElementById('grade-select').value);
+    const niveau = niveauParNom(grade, document.getElementById('niveau-select').value);
+
+    if(!grade || !niveau){
+      c.innerHTML = '<p class="text-sm text-slate-400">Sélectionnez un grade puis un niveau.</p>';
+      majCompteur();
+      return;
+    }
+
+    c.innerHTML = '';
+    niveau.matieres.forEach(matiere => {
+      const disponible = disponiblePourType(matiere);
+      const ligne = document.createElement('label');
+      ligne.className = 'flex items-center gap-2 text-sm p-3 bg-white rounded border ' +
+        (disponible ? 'cursor-pointer hover:bg-slate-50' : 'opacity-60 cursor-not-allowed bg-slate-100');
+
+      const inp = document.createElement('input');
+      inp.type = 'checkbox';
+      inp.className = 'matiere-checkbox shrink-0';
+      inp.value = matiere.nom;
+      inp.checked = matieresSelectionnees.includes(matiere.nom);
+      inp.disabled = !disponible;
+      inp.addEventListener('change', function(){ modifierSelectionMatiere(matiere.nom, inp.checked, inp); });
+      ligne.appendChild(inp);
+
+      const contenu = document.createElement('span');
+      contenu.className = 'flex-1';
+      contenu.textContent = matiere.nom;
+      ligne.appendChild(contenu);
+
+      if(!disponible){
+        const note = document.createElement('small');
+        note.className = 'text-xs font-semibold text-amber-700 whitespace-nowrap';
+        note.textContent = 'Examen uniquement';
+        ligne.appendChild(note);
       }
-    }
+      c.appendChild(ligne);
+    });
+    majCompteur();
+  }
 
-    // Localiser la commande
-    var ligneCmd = -1;
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][COLS_CMD.idCommande - 1].toString().trim() === id) {
-        if (data[i][COLS_CMD.statut - 1].toString().indexOf("En attente") === -1) {
-          return { valide: false, message: "Cette commande a déjà été traitée." };
-        }
-        ligneCmd       = i;
-        montantAttendu = parseInt(data[i][COLS_CMD.montant - 1], 10);
-        matieresCmd    = data[i][COLS_CMD.matieres - 1].toString().split(/[,;]\s*/).filter(function(m){ return m.trim() !== ""; });
-        email          = data[i][COLS_CMD.email - 1].toString().trim();
-        type           = data[i][COLS_CMD.type - 1].toString().trim() || 'tutoriel';
-        wa             = data[i][COLS_CMD.whatsapp - 1].toString().trim();
-        mat            = data[i][COLS_CMD.matricule - 1].toString().trim();
-        break;
+  function modifierSelectionMatiere(nom, cochee, checkbox){
+    if(cochee){
+      if(matieresSelectionnees.includes(nom)) return;
+      if(matieresSelectionnees.length >= 3){
+        checkbox.checked = false;
+        alert('Maximum : 3 matières.');
+        return;
       }
+      matieresSelectionnees.push(nom);
+    } else {
+      matieresSelectionnees = matieresSelectionnees.filter(matiere => matiere !== nom);
     }
-    if (ligneCmd === -1) return { valide: false, message: "Commande introuvable." };
+    majCompteur();
+  }
 
-    // Vérifier la transaction MVola
-    var verification = rechercherRefMVola(ref);
+  function retirerMatiere(nom){
+    matieresSelectionnees = matieresSelectionnees.filter(matiere => matiere !== nom);
+    genererCheckboxes();
+    majCompteur();
+  }
 
-    // --- Anti-course : le SMS n'est peut-être pas encore arrivé. On tente une
-    // COLLECTE IMMÉDIATE des emails MVola (passerelle SMS→Email) puis on
-    // re-cherche UNE fois, au lieu d'attendre le trigger de 5 minutes.
-    // On retient si cette collecte a RÉUSSI : c'est le signal qui distingue
-    // « référence erronée » (collecte OK mais réf absente) de « passerelle
-    // Forward SMS/Gmail indisponible » (collecte en échec → vrai cas d'attente).
-    if (!verification.found) {
-      var collecteOk = true;
-      try { collecterEmailsMvola_(); }
-      catch (eColl) { collecteOk = false; logErreur('Collecte_OnDemand', eColl, { ref: ref }); }
-      verification = rechercherRefMVola(ref);
+  function majCompteur() {
+    const compteur = document.getElementById('counter');
+    compteur.textContent = matieresSelectionnees.length + ' / 3';
 
-      if (!verification.found) {
-        if (!collecteOk) {
-          // La passerelle SMS→Email n'a pas répondu → on invite à patienter.
-          return { valide: false, statut: "systeme_indisponible",
-            message: "Service de vérification momentanément indisponible. Patientez 1 à 2 minutes puis réessayez." };
-        }
-        // Collecte OK mais référence absente des SMS reçus → référence fausse.
-        return { valide: false, statut: "ref_invalide",
-          message: "Référence invalide ou déjà utilisée. Vérifiez le numéro saisi (référence MVola à 10 chiffres)." };
-      }
-    }
-    if (verification.montant < montantAttendu) {
-      return { valide: false, message: "Montant insuffisant. Reçu : " + verification.montant + " Ar, attendu : " + montantAttendu + " Ar." };
+    const resume = document.getElementById('selection-resume');
+    if(!matieresSelectionnees.length){
+      resume.style.display = 'none';
+      resume.innerHTML = '';
+      return;
     }
 
-    // Validation atomique
-    cmdSheet.getRange(ligneCmd + 1, COLS_CMD.statut).setValue("Payé");
-    cmdSheet.getRange(ligneCmd + 1, COLS_CMD.refMvola).setValue(ref);
-    cmdSheet.getRange(ligneCmd + 1, COLS_CMD.datePaiement).setValue(new Date());
-    SpreadsheetApp.flush();
-  } finally { lock.releaseLock(); }
+    resume.style.display = 'block';
+    resume.innerHTML = '';
+    const titre = document.createElement('span');
+    titre.className = 'font-semibold mr-2';
+    titre.textContent = 'Sélection actuelle :';
+    resume.appendChild(titre);
 
-  // --- Hors verrou : opérations lentes (envois) ---
-  var numeroDemande = genererNumeroDemande();
-  enregistrerDemande({
-    date: new Date().toLocaleDateString('fr-FR'),
-    whatsapp: wa, motif: type, numero: mat, vague: getVagueActive_(), refMvola: ref, email: email
-  }, matieresCmd, "Payé", numeroDemande);
-
-  if (email) {
-    envoyerAccesEtudiant(email, matieresCmd, type, id);
-  }
-
-  enregistrerHistorique(wa, matieresCmd, type, "Envoyé", mat, getVagueActive_());
-  incrementerCompteur("etudiant");
-
-  return { valide: true, message: "Paiement validé et accès envoyés !", commandeId: id, matieres: matieresCmd };
-}
-
-// ============================================================
-// PARTAGE DRIVE SÉCURISÉ & ENVOI DES ACCÈS
-// ============================================================
-function partagerDossierAvecEtudiant(folderId, email, nomMatiere) {
-  if (!folderId) return;
-  try {
-    DriveApp.getFolderById(folderId).addViewer(email);
-    Logger.log("Dossier " + nomMatiere + " partagé avec " + email);
-  } catch (e) {
-    logErreur("Partage_Drive", e, { folderId: folderId, email: email, matiere: nomMatiere });
-  }
-}
-
-function envoyerAccesEtudiant(email, matieres, type, commandeId) {
-  var usePublic = CONFIG.USE_PUBLIC_LINKS || false;
-  var liens = [];
-  var messageEmail = "Bonjour,\n\nVotre commande (" + commandeId + ") a été validée.\n\n";
-
-  for (var i = 0; i < matieres.length; i++) {
-    var mat = matieres[i];
-    var data = CLOUD_LINKS[mat];
-    if (!data) continue;
-    var folderId = (type === "tutoriel") ? data.folderId : data.examId;
-    if (!folderId) { liens.push("- " + mat + " : Lien indisponible"); continue; }
-    if (!usePublic) partagerDossierAvecEtudiant(folderId, email, mat);
-    var lien = "https://drive.google.com/drive/folders/" + folderId;
-    liens.push("- " + mat + " : " + lien + (usePublic ? "" : " (accès restreint à votre compte Google)"));
-  }
-
-  messageEmail += "Vos accès :\n\n" + liens.join("\n\n");
-  messageEmail += "\n\nConservez votre numéro de commande : " + commandeId + "\n\nCordialement,\nL'équipe IMGAM.";
-
-  try { MailApp.sendEmail({ to: email, subject: "[IMGAM] Accès à vos " + type + "s", body: messageEmail }); }
-  catch (e) { logErreur("Envoi_Email", e, { email: email }); }
-  return liens;
-}
-
-// ============================================================
-// RECHERCHE RÉFÉRENCE MVola (extrait le montant)
-// ============================================================
-// Extrait le montant reçu — gère les formats opérateurs connus
-//  • Orange : "Vous avez recu 6 600 Ar ..."
-//  • MVola  : "6 775 Ar recu de ..."
-//  • MVola dépôt : "Depot reussi: 6 800 Ar aupres de ..."  (le montant est
-//    AVANT le "Solde : X Ar", donc le premier "Ar" après "Depot" est le bon)
-function extraireMontant_(smsText) {
-  var patterns = [
-    /re[cç]u\s+([\d\s]+?)\s*Ar/i,          // "recu 6 600 Ar"
-    /([\d\s]+?)\s*Ar\s*re[cç]u/i,          // "6 775 Ar recu"
-    /d[ée]p[oô]t\b[^\d]*([\d\s]+?)\s*Ar/i  // "Depot reussi: 6 800 Ar"
-  ];
-  for (var i = 0; i < patterns.length; i++) {
-    var m = patterns[i].exec(smsText);
-    if (m) { var v = parseInt(m[1].replace(/\s/g, ''), 10); if (v > 0) return v; }
-  }
-  return 0;
-}
-
-// [CORRECTIF #3] Échappe les métacaractères regex d'une chaîne
-function echapperRegex_(s) {
-  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// [CORRECTIF #3] Recherche stricte de la référence.
-// AVANT : un repli indexOf() validait la réf si elle apparaissait N'IMPORTE OÙ,
-//   y compris comme sous-chaîne d'un numéro de téléphone / d'un solde / d'une autre
-//   référence → validation possible avec une fausse référence.
-// APRÈS : la référence doit apparaître comme un NOMBRE ENTIER borné (délimité par
-//   des caractères non-chiffres ou les bords du texte). Le contexte "Ref:" reste un
-//   bonus mais n'est plus la seule voie ; aucune sous-chaîne partielle n'est acceptée.
-function rechercherRefMVola(refEtudiant) {
-  var smsFeuil = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.sms);
-  if (!smsFeuil) return { found: false };
-  var ref = (refEtudiant || '').toString().trim();
-  if (!ref) return { found: false };
-
-  var refEsc = echapperRegex_(ref);
-  // Nombre entier borné : pas précédé/suivi d'un autre chiffre.
-  var reToken    = new RegExp("(?:^|[^0-9])" + refEsc + "(?:[^0-9]|$)");
-  // Référence explicitement étiquetée "Ref"/"Ref:" (confiance maximale).
-  var reAvecLabel = new RegExp("Ref\\.?:?\\s*" + refEsc + "(?:[^0-9]|$)", "i");
-
-  var data = smsFeuil.getDataRange().getValues();
-  for (var i = 0; i < data.length; i++) {
-    var smsText = data[i][COLS_SMS.message - 1].toString();
-    if (reAvecLabel.test(smsText) || reToken.test(smsText)) {
-      return { found: true, montant: extraireMontant_(smsText) };
-    }
-  }
-  return { found: false };
-}
-
-// ============================================================
-// UTILITAIRES (journal, logs, envois)
-// ============================================================
-function enregistrerDemande(body, matieres, statut, numeroDemande) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.formulaire);
-  sheet.appendRow([new Date(), body.date || "", body.whatsapp || "", body.motif || "", matieres.join(", "), body.numero || "", body.vague || "", body.refMvola || "", body.email || "", statut || "", numeroDemande || ""]);
-  return sheet.getLastRow();
-}
-
-function enregistrerHistorique(phone, matieres, type, statut, numero, vague) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.historique);
-  sheet.appendRow([new Date(), phone, matieres.join(", "), type, statut, numero || '', vague || '']);
-}
-
-function incrementerCompteur(type) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.stats);
-  var today = Utilities.formatDate(new Date(), "Indian/Antananarivo", "yyyy-MM-dd");
-  sheet.appendRow([today, type === "admin" ? 1 : 0, type === "etudiant" ? 1 : 0, 1]);
-}
-
-function logErreur(contexte, erreur, donnees) {
-  try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.logs);
-    if (sheet) sheet.appendRow([new Date(), contexte, erreur.toString(), JSON.stringify(donnees)]);
-  } catch (e) { Logger.log("logErreur a échoué: " + e); }
-}
-
-
-// ============================================================
-// ADMIN : STATS, LISTE, ACTIONS (sur la feuille "Commandes")
-// ============================================================
-function formaterDate_(v) {
-  if (!v) return '';
-  var d = new Date(v);
-  if (isNaN(d.getTime())) return v.toString();
-  return Utilities.formatDate(d, "Indian/Antananarivo", "yyyy-MM-dd HH:mm");
-}
-
-function statutPaye_(s) {
-  return s.indexOf("Payé") !== -1 || s.indexOf("Validé") !== -1 || s.indexOf("Envoyé") !== -1;
-}
-
-function getStatsAdmin() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.commandes);
-  var res = { total: 0, attente: 0, paye: 0, envoye: 0, echec: 0, annule: 0, journalier: 0, mensuel: 0 };
-  if (!sheet) return res;
-  var data = sheet.getDataRange().getValues();
-  var today = new Date(); today.setHours(0,0,0,0);
-  var debutMois = new Date(today.getFullYear(), today.getMonth(), 1);
-  for (var i = 1; i < data.length; i++) {
-    var s = (data[i][COLS_CMD.statut - 1] || '').toString();
-    res.total++;
-    if (s.indexOf("Payé") !== -1 || s.indexOf("Validé") !== -1) res.paye++;
-    else if (s.indexOf("Envoyé") !== -1) res.envoye++;
-    else if (s.indexOf("Annul") !== -1) res.annule++;
-    else if (s.indexOf("Échec") !== -1 || s.indexOf("Echec") !== -1) res.echec++;
-    else res.attente++;
-
-    if (statutPaye_(s)) {
-      var dp = data[i][COLS_CMD.datePaiement - 1];
-      var montant = parseInt(data[i][COLS_CMD.montant - 1], 10) || 0;
-      var d = dp ? new Date(dp) : null;
-      if (d && !isNaN(d.getTime())) {
-        if (d >= today) res.journalier += montant;
-        if (d >= debutMois) res.mensuel += montant;
-      }
-    }
-  }
-  return res;
-}
-
-function getCommandes(filtres) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.commandes);
-  if (!sheet) return { commandes: [], total: 0 };
-  var data = sheet.getDataRange().getValues();
-  var commandes = [];
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    commandes.push({
-      id: row[COLS_CMD.idCommande - 1] || '',
-      date: formaterDate_(row[COLS_CMD.dateCreation - 1]),
-      matricule: (row[COLS_CMD.matricule - 1] || '').toString(),
-      whatsapp: (row[COLS_CMD.whatsapp - 1] || '').toString(),
-      email: (row[COLS_CMD.email - 1] || '').toString(),
-      type: (row[COLS_CMD.type - 1] || '').toString(),
-      matieres: (row[COLS_CMD.matieres - 1] || '').toString(),
-      ref: (row[COLS_CMD.refMvola - 1] || '').toString(),
-      statut: (row[COLS_CMD.statut - 1] || 'En attente').toString()
+    matieresSelectionnees.forEach(nom => {
+      const tag = document.createElement('span');
+      tag.className = 'inline-flex items-center gap-1 bg-white border border-sky-200 rounded-full px-2 py-1 mr-1 mt-1';
+      const libelle = document.createElement('span');
+      libelle.textContent = nom;
+      tag.appendChild(libelle);
+      const supprimer = document.createElement('button');
+      supprimer.type = 'button';
+      supprimer.className = 'font-bold text-sky-700 hover:text-red-600 leading-none';
+      supprimer.title = 'Retirer cette matière';
+      supprimer.setAttribute('aria-label', 'Retirer ' + nom);
+      supprimer.textContent = '×';
+      supprimer.addEventListener('click', () => retirerMatiere(nom));
+      tag.appendChild(supprimer);
+      resume.appendChild(tag);
     });
   }
-  if (filtres.recherche) {
-    var q = filtres.recherche.toLowerCase();
-    commandes = commandes.filter(function(c) {
-      return c.matricule.toLowerCase().indexOf(q) !== -1 ||
-             c.whatsapp.indexOf(q) !== -1 ||
-             c.ref.toLowerCase().indexOf(q) !== -1 ||
-             c.id.toLowerCase().indexOf(q) !== -1;
-    });
-  }
-  if (filtres.statut) commandes = commandes.filter(function(c) { return c.statut.indexOf(filtres.statut) !== -1; });
-  commandes.reverse(); // plus récentes d'abord
-  var total = commandes.length;
-  var page = parseInt(filtres.page) || 1;
-  var limit = parseInt(filtres.limit) || 20;
-  var start = (page - 1) * limit;
-  return { commandes: commandes.slice(start, start + limit), total: total };
-}
 
-function getErreurs(limit) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.logs);
-  if (!sheet) return [];
-  var data = sheet.getDataRange().getValues();
-  var errs = [];
-  var max = parseInt(limit, 10) || 50;
-  for (var i = data.length - 1; i >= 1 && errs.length < max; i--) {
-    errs.push({ timestamp: formaterDate_(data[i][0]), contexte: data[i][1] || '', erreur: data[i][2] || '', donnees: data[i][3] || '' });
-  }
-  return errs;
-}
+  document.getElementById('btn-to-step2').addEventListener('click', function(){
+    const mat = document.getElementById('matricule').value.trim(), wa = document.getElementById('whatsapp').value.trim(), em = document.getElementById('email').value.trim();
+    const matieres = matieresSelectionnees.slice();
+    const statusEl = document.getElementById('status-step1');
+    if(!mat||!wa||!em||matieres.length===0){ statusEl.textContent='❌ Remplissez tous les champs et sélectionnez au moins une matière.'; statusEl.className='mt-2 text-sm text-red-600'; return; }
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ statusEl.textContent='❌ Adresse email invalide.'; statusEl.className='mt-2 text-sm text-red-600'; return; }
 
-function trouverLigneCommande_(data, id) {
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][COLS_CMD.idCommande - 1].toString().trim() === id.toString().trim()) return i;
-  }
-  return -1;
-}
+    const btn = this; const old = btn.textContent; btn.disabled = true;
+    statusEl.classList.add('hidden');
 
-function renvoyerLiens(commandeId) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.commandes);
-  var data = sheet.getDataRange().getValues();
-  var ligne = trouverLigneCommande_(data, commandeId);
-  if (ligne === -1) return { status: 'error', message: 'Commande introuvable' };
-  var email = (data[ligne][COLS_CMD.email - 1] || '').toString().trim();
-  var type = (data[ligne][COLS_CMD.type - 1] || 'tutoriel').toString().trim();
-  var matieres = data[ligne][COLS_CMD.matieres - 1].toString().split(/[,;]\s*/).filter(function(m){ return m.trim() !== ''; });
-  if (!email) return { status: 'error', message: "Aucun email enregistré pour cette commande." };
-  envoyerAccesEtudiant(email, matieres, type, commandeId);
-  return { status: 'ok', message: 'Accès renvoyés' };
-}
+    // EXAMEN : recherche automatique du tutoriel déjà payé.
+    // Aucune nouvelle commande payante et aucune ressaisie de référence MVola.
+    if(typeCommande === 'examen'){
+      btn.textContent = 'Recherche du paiement du tutoriel...';
+      apiPost({ action:'obtenirSujetExamen', matricule:mat, whatsapp:wa, email:em, matieres:matieres.map(codeMatiere) })
+        .then(d=>{
+          if(d.status === 'ok'){
+            commandeId = d.commandeId;
+            matieresSelectionnees = matieres;
+            document.getElementById('final-commande-id').textContent = d.commandeId || '—';
+            goToStep(4);
+          } else {
+            statusEl.textContent = '❌ '+(d.message || 'Paiement du tutoriel introuvable.');
+            statusEl.className = 'mt-2 text-sm text-red-600';
+          }
+        })
+        .catch(()=>{
+          statusEl.textContent='❌ Erreur réseau.';
+          statusEl.className='mt-2 text-sm text-red-600';
+        })
+        .finally(()=>{ btn.disabled=false; btn.textContent=old; });
+      return;
+    }
 
-function validerManuel(commandeId) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.commandes);
-  var data = sheet.getDataRange().getValues();
-  var ligne = trouverLigneCommande_(data, commandeId);
-  if (ligne === -1) return { status: 'error', message: 'Commande introuvable' };
-  sheet.getRange(ligne + 1, COLS_CMD.statut).setValue('Validé manuellement');
-  if (!data[ligne][COLS_CMD.datePaiement - 1]) sheet.getRange(ligne + 1, COLS_CMD.datePaiement).setValue(new Date());
-  SpreadsheetApp.flush();
-  var email = (data[ligne][COLS_CMD.email - 1] || '').toString().trim();
-  var type = (data[ligne][COLS_CMD.type - 1] || 'tutoriel').toString().trim();
-  var matieres = data[ligne][COLS_CMD.matieres - 1].toString().split(/[,;]\s*/).filter(function(m){ return m.trim() !== ''; });
-  if (email) envoyerAccesEtudiant(email, matieres, type, commandeId);
-  return { status: 'ok', message: email ? 'Commande validée et accès envoyés' : 'Commande validée (email manquant)' };
-}
-
-function annulerCommande(commandeId) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.commandes);
-  var data = sheet.getDataRange().getValues();
-  var ligne = trouverLigneCommande_(data, commandeId);
-  if (ligne === -1) return { status: 'error', message: 'Commande introuvable' };
-  sheet.getRange(ligne + 1, COLS_CMD.statut).setValue('Annulée');
-  SpreadsheetApp.flush();
-  return { status: 'ok', message: 'Commande annulée' };
-}
-
-function csvEchapper_(v) {
-  v = (v == null ? '' : v).toString();
-  if (/^[=+\-@]/.test(v)) v = "'" + v; // neutralise l'injection de formule
-  if (v.indexOf('"') !== -1 || v.indexOf(';') !== -1 || v.indexOf('\n') !== -1) v = '"' + v.replace(/"/g, '""') + '"';
-  return v;
-}
-
-function exportCSV(filtres) {
-  filtres.page = 1; filtres.limit = 100000;
-  var result = getCommandes(filtres);
-  var rows = [["ID", "Date", "Matricule", "WhatsApp", "Email", "Type", "Matières", "Réf MVola", "Statut"]];
-  result.commandes.forEach(function(c) {
-    rows.push([c.id, c.date, c.matricule, c.whatsapp, c.email, c.type, c.matieres, c.ref, c.statut]);
+    // TUTORIEL : flux de paiement existant conservé sans modification.
+    btn.textContent = 'Création de la commande...';
+    apiPost({ action:'creerCommande', matricule:mat, whatsapp:wa, email:em, matieres:matieres.map(codeMatiere), type:typeCommande })
+      .then(d=>{
+        if(d.status==='ok'){
+          commandeId = d.commandeId;
+          matieresSelectionnees = matieres;
+          const total = d.montant;
+          let html='<h3 class="font-bold text-slate-700 text-sm mb-2">📋 Récapitulatif</h3>'
+            + '<div class="row"><span>N° commande</span><strong class="font-mono">'+esc(commandeId)+'</strong></div>'
+            + '<div class="row"><span>Type</span><strong>'+esc(typeCommande)+'</strong></div>'
+            + '<div class="row"><span>Matricule</span><strong>'+esc(mat)+'</strong></div>'
+            + '<div class="row"><span>WhatsApp</span><strong>'+esc(wa)+'</strong></div>'
+            + '<div class="row"><span>Email</span><strong>'+esc(em)+'</strong></div>'
+            + '<div class="mt-2"><span class="font-semibold">Matières :</span>';
+          matieres.forEach(m=>{ html+='<div class="matiere-item"><span>'+esc(m)+'</span><span class="text-emerald-700">6 500 Ar</span></div>'; });
+          html+='<div class="matiere-item font-bold"><span>Total</span><span class="text-emerald-800">'+total+' Ar</span></div></div>';
+          document.getElementById('recap-content').innerHTML = html;
+          document.getElementById('montant-exact').textContent = total+' Ar';
+          goToStep(2);
+        } else {
+          statusEl.textContent = '❌ '+(d.message||'Erreur lors de la création.');
+          statusEl.className = 'mt-2 text-sm text-red-600';
+        }
+      })
+      .catch(()=>{ statusEl.textContent='❌ Erreur réseau.'; statusEl.className='mt-2 text-sm text-red-600'; })
+      .finally(()=>{ btn.disabled=false; btn.textContent=old; });
   });
-  return rows.map(function(r) { return r.map(csvEchapper_).join(';'); }).join('\n');
-}
 
-// ============================================================
-// LECTURE ROBUSTE DU CORPS DES REQUÊTES DE L'APPLICATION
-// ------------------------------------------------------------
-// Les actions du formulaire et de l'administration peuvent arriver en JSON
-// ou sous forme de paramètres. Cette fonction ne sert plus à recevoir des SMS :
-// les SMS MVola arrivent exclusivement par Forward SMS → Gmail.
-// ============================================================
-function lireBody_(e) {
-  // 1) JSON brut envoyé par le formulaire ou l'administration
-  try {
-    if (e && e.postData && e.postData.contents) {
-      var c = e.postData.contents.trim();
-      if (c.charAt(0) === '{' || c.charAt(0) === '[') return JSON.parse(c);
-    }
-  } catch (_) {}
-  // 2) Repli : champs de formulaire → e.parameter
-  if (e && e.parameter && Object.keys(e.parameter).length) {
-    var obj = {};
-    for (var k in e.parameter) obj[k] = e.parameter[k];
-    return obj;
-  }
-  // 3) Dernier repli : corps URL-encodé non exposé dans e.parameter
-  try {
-    if (e && e.postData && e.postData.contents && e.postData.contents.indexOf('=') !== -1) {
-      var out = {};
-      e.postData.contents.split('&').forEach(function(p){
-        var kv = p.split('=');
-        if (kv[0]) out[decodeURIComponent(kv[0])] = decodeURIComponent((kv[1] || '').replace(/\+/g, ' '));
+  document.getElementById('btn-to-step3').addEventListener('click', ()=>goToStep(3));
+
+  document.getElementById('btn-verifier').addEventListener('click', function(){
+    const ref = document.getElementById('ref-paiement').value.trim();
+    const statusEl = document.getElementById('paiement-status');
+    if(!ref){ statusEl.innerHTML='<span class="text-red-600">❌ Entrez la référence.</span>'; return; }
+    // Contrôle immédiat du format : référence MVola = exactement 10 chiffres.
+    if(!/^\d{10}$/.test(ref)){ statusEl.innerHTML='<span class="text-red-600">❌ Référence invalide : elle doit comporter exactement 10 chiffres.</span>'; return; }
+    if(!commandeId){ statusEl.innerHTML='<span class="text-red-600">❌ Commande introuvable, recommencez.</span>'; return; }
+    const btn=this; btn.disabled=true; btn.innerHTML='Vérification...';
+    apiPost({ action:'verifierPaiement', commandeId:commandeId, ref:ref })
+      .then(d=>{
+        if(d.valide){ document.getElementById('final-commande-id').textContent = d.commandeId || commandeId; statusEl.innerHTML=''; goToStep(4); }
+        else {
+          // Le serveur A RÉPONDU : la référence est réellement rejetée (erronée / déjà utilisée / montant).
+          // → message immédiat, on ne fait PAS patienter.
+          statusEl.innerHTML='<span class="text-red-600">❌ '+esc(d.message)+'</span>';
+          btn.disabled=false; btn.innerHTML='Vérifier mon paiement';
+        }
+      })
+      .catch(()=>{
+        // Aucune réponse (Apps Script / Forward SMS / Gmail injoignable) :
+        // SEUL cas où l'on invite l'étudiant à patienter puis réessayer.
+        statusEl.innerHTML='<span class="text-amber-600">⏳ Service momentanément indisponible. Patientez 1 à 2 minutes puis réessayez.</span>';
+        btn.disabled=false; btn.innerHTML='Vérifier mon paiement';
       });
-      return out;
-    }
-  } catch (_) {}
-  return {};
-}
-
-// ============================================================
-// ENDPOINTS
-// ============================================================
-function doGet(e) {
-  initialiserFeuilles();
-  try {
-    var p = e.parameter || {};
-
-    // --- Public (lecture) ---
-    if (p.action === "getPublicConfig") return jsonResponse(lireConfig());
-    if (p.action === "getMatieresDisponibles") {
-      return jsonResponse({ status: "ok", matieres: getMatieresDisponibles(p.type === 'examen' ? 'examen' : 'tutoriel') });
-    }
-
-    if (p.action === "verifierDemande") {
-      var num = p.numero || "";
-      var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.formulaire);
-      if (!sheet) return jsonResponse({ trouve: false });
-      var data = sheet.getDataRange().getValues();
-      for (var i = 1; i < data.length; i++) {
-        if (data[i][COLS.numeroDemande - 1] == num) {
-          return jsonResponse({ trouve: true, statut: data[i][COLS.statut - 1], matieres: data[i][COLS.matiere - 1] });
-        }
-      }
-      return jsonResponse({ trouve: false });
-    }
-
-    // --- Admin (lecture, session requise) ---
-    if (!validerTokenSession(p.sessionToken || "")) return jsonResponse({ status: "error", message: "Session expirée." });
-    switch (p.action) {
-      case "getCommandes":  return jsonResponse(getCommandes({ recherche: p.recherche || '', statut: p.statut || '', page: p.page || 1, limit: p.limit || 20 }));
-      case "getStatsAdmin": return jsonResponse(getStatsAdmin());
-      case "getConfig":     return jsonResponse({ status: "ok", config: lireConfig() });
-      case "getErreurs":    return jsonResponse(getErreurs(p.limit));
-      case "exportCSV":
-        var csv = exportCSV({ recherche: p.recherche || '', statut: p.statut || '' });
-        return ContentService.createTextOutput(csv).setMimeType(ContentService.MimeType.CSV).downloadAsFile("commandes.csv");
-      default: return jsonResponse({ status: "error", message: "Action inconnue." });
-    }
-  } catch (err) {
-    logErreur("doGet", err, e && e.parameter);
-    return jsonResponse({ status: "error", message: err.toString() });
-  }
-}
-
-function doPost(e) {
-  initialiserFeuilles();
-  try {
-    // [CORRECTIF #1] Lecture tolérante : JSON, formulaire ou URL-encodé.
-    var body = lireBody_(e);
-
-    // --- Actions applicatives (mutations) ---
-    if (body.action) {
-      switch (body.action) {
-        case "creerCommande": {
-          var mats = body.matieres;
-          if (typeof mats === 'string') { try { mats = JSON.parse(mats); } catch (_) { mats = mats.split(/\s*,\s*/); } }
-          var cmd = creerCommande(body.matricule, body.whatsapp, body.email, mats || [], body.type || 'tutoriel');
-          return jsonResponse({ status: "ok", commandeId: cmd.commandeId, montant: cmd.montant });
-        }
-        case "obtenirSujetExamen": {
-          var matsExamen = body.matieres;
-          if (typeof matsExamen === 'string') {
-            try { matsExamen = JSON.parse(matsExamen); }
-            catch (_) { matsExamen = matsExamen.split(/\s*,\s*/); }
-          }
-          return jsonResponse(obtenirSujetExamenDepuisTutorielPaye(
-            body.matricule, body.whatsapp, body.email, matsExamen || []
-          ));
-        }
-        case "verifierPaiement":
-          return jsonResponse(verifierPaiementCommande(body.commandeId, body.ref));
-        case "login": {
-          if (!loginAutorise()) return jsonResponse({ status: "error", message: "Trop de tentatives. Réessayez dans 15 minutes." });
-          if ((body.password || "") === getAdminPassword()) {
-            resetEchecLogin();
-            return jsonResponse({ status: "ok", sessionToken: genererTokenSession() });
-          }
-          enregistrerEchecLogin();
-          return jsonResponse({ status: "error", message: "Mot de passe incorrect." });
-        }
-      }
-      // Mutations admin (session requise)
-      if (!validerTokenSession(body.sessionToken || "")) return jsonResponse({ status: "error", message: "Session expirée." });
-      switch (body.action) {
-        case "renvoyerLiens":   return jsonResponse(renvoyerLiens(body.id));
-        case "validerManuel":   return jsonResponse(validerManuel(body.id));
-        case "annulerCommande": return jsonResponse(annulerCommande(body.id));
-        case "majConfig":       return jsonResponse(majConfig(body.parametres));
-        default: return jsonResponse({ status: "error", message: "Action inconnue." });
-      }
-    }
-
-    // Aucun webhook SMS externe : Forward SMS transmet les SMS à Gmail,
-    // puis collecterEmailsMvola_() les importe dans MVola_SMS.
-    return jsonResponse({ status: "error", message: "Requête sans action non prise en charge." });
-
-  } catch (err) {
-    logErreur("doPost", err, { erreur: err.toString() });
-    return jsonResponse({ status: "error", message: err.toString() });
-  }
-}
-
-function extraireEtEnregistrerMvola(smsText) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(FEUILLES.mvolaRecu);
-  if (!sheet) { sheet = ss.insertSheet(FEUILLES.mvolaRecu); sheet.appendRow(["Montant_reçu", "Nom_Etudiant", "Numero_téléphone", "Date_Envoi", "hh:mm", "Motif", "Montant_Solde", "Numero_Ref"]); }
-  var r = {
-    // "recu de NOM 034...", "part de NOM 034...", "aupres de NOM (038...)"
-    nom: /(?:re[cç]u de|part de|aupr[eè]s de)\s+(.+?)\s*\(?\s*\d{9,12}/i,
-    // numéro éventuellement entre parenthèses, suivi de "le JJ/MM/AA"
-    tel: /(\d{9,12})\)?\s+le\s+\d{2}\/\d{2}\/\d{2,4}/i,
-    date: /le\s+(\d{2}\/\d{2}\/\d{2,4})/i,
-    heure: /[aà]\s+(\d{1,2}:\d{2})/i,
-    motif: /Raison:\s*([^\.]+)/i,
-    solde: /solde(?:\s+est\s+de)?\s*:?\s*([\d\s]+?)\s*Ar/i,
-    ref: /Ref:?\s*(\d+)/i
-  };
-  var get = function(regex, isNum) { var m = regex.exec(smsText); if (m && m[1]) { return isNum ? parseInt(m[1].replace(/\s/g,''),10) : m[1].trim(); } return ''; };
-  sheet.appendRow([extraireMontant_(smsText), get(r.nom, false), get(r.tel, false), get(r.date, false), get(r.heure, false), get(r.motif, false), get(r.solde, true), get(r.ref, false)]);
-}
-
-// ============================================================
-// PASSERELLE PRINCIPALE : FORWARD SMS → GMAIL → APPS SCRIPT
-// ------------------------------------------------------------
-// Le téléphone Android transfère automatiquement les SMS MVola vers Gmail
-// avec l'application Forward SMS. Le script lit les e-mails non lus portant
-// le libellé Gmail "IMGAM-SMS", archive le SMS dans MVola_SMS et extrait la
-// transaction MVola dans Mvola_Recu.
-//
-// ⚙️ Mise en place :
-//   1. Dans Forward SMS : transférer les SMS MVola vers CONFIG.adminEmail.
-//   2. Dans Gmail : créer un filtre sur ces e-mails et appliquer "IMGAM-SMS".
-//   3. Exécuter UNE fois installerTriggerForwardSMS() pour autoriser Gmail.
-//   4. La vérification d'un paiement force aussi une lecture immédiate de Gmail.
-//   • Requête personnalisable avec la propriété GMAIL_SMS_QUERY.
-// ============================================================
-function getGmailQuery_() {
-  return PropertiesService.getScriptProperties().getProperty('GMAIL_SMS_QUERY') || 'label:imgam-sms is:unread';
-}
-
-// [CORRECTIF #2] Cœur de la collecte SANS LockService, réutilisable à la demande
-// (appelé aussi par verifierPaiementCommande pour ne pas attendre le trigger 5 min).
-function collecterEmailsMvola_() {
-  var smsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.sms);
-  if (!smsSheet) return 0;
-  var threads = GmailApp.search(getGmailQuery_(), 0, 50);
-  var traite = 0;
-  for (var t = 0; t < threads.length; t++) {
-    var msgs = threads[t].getMessages();
-    for (var m = 0; m < msgs.length; m++) {
-      var msg = msgs[m];
-      if (!msg.isUnread()) continue;
-      var corps = (msg.getPlainBody() || '').toString();
-      var sujet = (msg.getSubject() || '').toString();
-      // Forward SMS peut placer une partie du SMS dans l'objet ou dans le corps.
-      // On concatène les deux pour rendre l'extraction indépendante du modèle d'e-mail.
-      var contenuSms = (sujet + "\n" + corps).trim();
-      smsSheet.appendRow([new Date(), msg.getFrom() || sujet, contenuSms]);
-      extraireEtEnregistrerMvola(contenuSms);
-      msg.markRead(); // évite de retraiter le même e-mail Forward SMS
-      traite++;
-    }
-  }
-  return traite;
-}
-
-function verifierEmailsMvola() {
-  var lock = LockService.getScriptLock();
-  if (!lock.tryLock(5000)) return; // un seul passage à la fois
-  try {
-    var traite = collecterEmailsMvola_();
-    if (traite > 0) Logger.log(traite + ' email(s) MVola traité(s).');
-  } catch (e) {
-    logErreur('Lecture_Emails_MVola', e, {});
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-// À exécuter UNE fois : planifie la lecture automatique des e-mails Forward SMS.
-function installerTriggerForwardSMS() {
-  var triggers = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < triggers.length; i++) {
-    if (triggers[i].getHandlerFunction() === 'verifierEmailsMvola') ScriptApp.deleteTrigger(triggers[i]);
-  }
-  ScriptApp.newTrigger('verifierEmailsMvola').timeBased().everyMinutes(1).create();
-  Logger.log('Forward SMS activé : lecture Gmail toutes les 1 minute.');
-}
-
-// Compatibilité avec l'ancien nom si vous l'aviez déjà utilisé manuellement.
-function installerTriggerEmails() {
-  return installerTriggerForwardSMS();
-}
-
-function lireConfig() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var tz = ss.getSpreadsheetTimeZone() || "Indian/Antananarivo";
-  var sheet = ss.getSheetByName(FEUILLES.config);
-  var data = sheet.getDataRange().getValues();
-  var cfg = {};
-  for (var i = 1; i < data.length; i++) {
-    var v = data[i][1];
-    // Si Sheets a stocké une date comme objet Date, la normaliser en "aaaa-mm-jj"
-    if (v instanceof Date) v = Utilities.formatDate(v, tz, "yyyy-MM-dd");
-    cfg[data[i][0]] = v;
-  }
-  return cfg;
-}
-
-// Met à jour un lot de paramètres Config (admin). Reçoit un objet { cle: valeur, ... }
-function majConfig(parametres) {
-  if (!parametres || typeof parametres !== 'object') return { status: 'error', message: 'Paramètres invalides.' };
-  var clesAutorisees = ['Vague_Active', 'Tuto_Debut', 'Tuto_Fin', 'Examen_Debut', 'Examen_Fin'];
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FEUILLES.config);
-  var data = sheet.getDataRange().getValues();
-  var maj = 0;
-  for (var cle in parametres) {
-    if (clesAutorisees.indexOf(cle) === -1) continue;
-    var valeur = parametres[cle];
-    // Validation simple des dates (yyyy-MM-dd)
-    if (cle !== 'Vague_Active' && valeur && !/^\d{4}-\d{2}-\d{2}$/.test(valeur.toString())) {
-      return { status: 'error', message: "Date invalide pour " + cle + " (format attendu : AAAA-MM-JJ)." };
-    }
-    var ligne = -1;
-    for (var i = 1; i < data.length; i++) { if (data[i][0] === cle) { ligne = i + 1; break; } }
-    if (ligne === -1) { sheet.appendRow([cle, '']); ligne = sheet.getLastRow(); data.push([cle, '']); }
-    var cell = sheet.getRange(ligne, 2);
-    cell.setNumberFormat('@');     // forcer le format Texte (évite la conversion en date)
-    cell.setValue(valeur);
-    maj++;
-  }
-  SpreadsheetApp.flush();
-  return { status: 'ok', message: maj + ' paramètre(s) mis à jour.', config: lireConfig() };
-}
-
-function jsonResponse(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
-
-// Fonctions de test / admin manuelles
-function verifierPaiementsEnAttente() { Logger.log("Vérification..."); }
-
-// Test rapide du correctif #3 : à lancer manuellement pour valider la logique de bornage.
-function testRechercheRef_() {
-  var cas = [
-    { sms: "Ref: 2370867180 recu 6500 Ar", ref: "2370867180", attendu: true },
-    { sms: "6 500 Ar recu de 0341234567 Ref:2370867180", ref: "2370867180", attendu: true },
-    { sms: "recu de 0342370867180 solde 12000 Ar", ref: "2370867180", attendu: false }, // sous-chaîne d'un numéro → NE DOIT PAS matcher
-    { sms: "Aucune reference ici", ref: "2370867180", attendu: false }
-  ];
-  cas.forEach(function(c){
-    var refEsc = echapperRegex_(c.ref);
-    var reToken = new RegExp("(?:^|[^0-9])" + refEsc + "(?:[^0-9]|$)");
-    var reLabel = new RegExp("Ref\\.?:?\\s*" + refEsc + "(?:[^0-9]|$)", "i");
-    var ok = reLabel.test(c.sms) || reToken.test(c.sms);
-    Logger.log((ok === c.attendu ? "OK  " : "ÉCHEC ") + " ref=" + c.ref + " | " + c.sms);
   });
-}
+
+  // Initialisation
+  window.addEventListener('DOMContentLoaded', ()=>{
+    document.getElementById('grade-select').addEventListener('change', choisirGrade);
+    document.getElementById('niveau-select').addEventListener('change', choisirNiveau);
+    document.querySelectorAll('input[name="typeCommande"]').forEach(r=>r.addEventListener('change', chargerMatieres));
+    chargerConfig();
+    chargerMatieres();
+  });
+</script>
+</body>
+</html>

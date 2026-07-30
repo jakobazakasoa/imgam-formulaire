@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IMGAM — Administration</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    :root { --primary: #0f1a2e; --secondary: #2a6b9e; --gold: #c9a84c; --green: #1a8a5a; --red: #c0392b; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f2f4f7; color: #1a1a2e; min-height: 100vh; }
+    .card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 8px 40px rgba(15,26,46,0.08); border: 1px solid rgba(0,0,0,0.04); }
+    .stat { background: white; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+    .stat .val { font-size: 28px; font-weight: 800; }
+    .stat .lbl { font-size: 11px; color: #5a6a7a; text-transform: uppercase; letter-spacing: 0.3px; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-attente { background: #fef3c7; color: #92400e; }
+    .badge-paye { background: #d1fae5; color: #065f46; }
+    .badge-envoye { background: #dbeafe; color: #1e40af; }
+    .badge-echec { background: #fee2e2; color: #991b1b; }
+    .badge-annule { background: #f3f4f6; color: #4b5563; }
+    .btn { padding: 8px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #1a2d4a; }
+    .btn-success { background: var(--green); color: white; }
+    .btn-success:hover { background: #147a4e; }
+    .btn-danger { background: var(--red); color: white; }
+    .btn-danger:hover { background: #a93226; }
+    .btn-outline { background: transparent; border: 1.5px solid #d1d5db; color: #4b5563; }
+    .btn-outline:hover { background: #f3f4f6; }
+    .search-input { padding: 8px 14px; border: 1.5px solid #e2e6ea; border-radius: 10px; font-size: 14px; width: 100%; max-width: 300px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #f8fafc; text-align: left; padding: 12px 10px; font-weight: 600; color: #0f1a2e; border-bottom: 2px solid #e2e8f0; }
+    td { padding: 10px; border-bottom: 1px solid #f1f5f9; }
+    tr:hover { background: #f8fafc; }
+    .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
+    .pagination { display: flex; gap: 8px; justify-content: center; align-items: center; margin-top: 20px; }
+    .pagination button { padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; }
+    .pagination button.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .login-box { max-width: 400px; margin: 80px auto; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.08); }
+    #login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f2f4f7; }
+    #dashboard { display: none; max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+    .topbar h1 { font-size: 24px; font-weight: 800; color: var(--primary); }
+    .topbar h1 span { color: var(--gold); }
+    .logout-btn { background: rgba(15,26,46,0.1); border: none; padding: 8px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .logout-btn:hover { background: rgba(15,26,46,0.2); }
+    .stats-toolbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px; }
+    .stats-toolbar select { min-width:220px; padding:9px 14px; border-radius:10px; border:1.5px solid #e2e6ea; background:white; font-weight:600; color:#0f1a2e; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .session-summary { margin-bottom:24px; }
+    .session-row { cursor:pointer; }
+    .session-row.active { background:#eff6ff; }
+    .session-row td:first-child { font-weight:700; color:var(--primary); }
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 2px solid #e2e8f0; }
+    .tab { padding: 8px 20px; border: none; background: transparent; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 3px solid transparent; }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .erreur-item { padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+    .erreur-item .contexte { font-weight: 600; color: var(--red); }
+    .matieres-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+    .matiere-grade { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff; }
+    .matiere-grade-title { padding: 12px 16px; background: #f8fafc; color: var(--primary); font-size: 15px; font-weight: 800; border-bottom: 1px solid #e2e8f0; }
+    .matiere-niveau { padding: 12px 16px; border-bottom: 1px solid #eef2f7; }
+    .matiere-niveau:last-child { border-bottom: none; }
+    .matiere-niveau h4 { color: #475569; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 8px; }
+    .matiere-liste { list-style: none; display: grid; gap: 7px; }
+    .matiere-liste li { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; font-size: 13px; color: #334155; }
+    .matiere-liste li::before { content: '•'; color: var(--secondary); font-weight: 800; margin-right: 8px; }
+    .matiere-nom { flex: 1; }
+    .badge-dispo { white-space: nowrap; padding: 3px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; }
+    .badge-tuto-exam { background: #d1fae5; color: #065f46; }
+    .badge-exam-only { background: #fef3c7; color: #92400e; }
+    @media (max-width: 768px) {
+      .filters { flex-direction: column; align-items: stretch; }
+      .search-input { max-width: 100%; }
+      .stats-toolbar { align-items:stretch; }
+      .stats-toolbar select { width:100%; min-width:0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Écran de connexion -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1 style="font-size:28px;font-weight:800;text-align:center;">IMG<span style="color:#c9a84c;">A</span>M</h1>
+    <p style="text-align:center;color:#5a6a7a;margin-bottom:24px;">Administration</p>
+    <input type="password" id="pwd-input" placeholder="Mot de passe admin" style="width:100%;padding:12px;border:1.5px solid #e2e6ea;border-radius:10px;margin-bottom:12px;font-size:14px;" onkeydown="if(event.key==='Enter') login()">
+    <button onclick="login()" id="btn-login" style="width:100%;padding:12px;background:#0f1a2e;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;">Se connecter</button>
+    <div id="login-err" style="color:red;margin-top:12px;display:none;font-size:14px;"></div>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+
+  <div class="topbar">
+    <h1>IMG<span>A</span>M</h1>
+    <div style="display:flex;gap:12px;align-items:center;">
+      <span id="session-info" style="font-size:13px;color:#5a6a7a;"></span>
+      <button class="logout-btn" onclick="logout()">Déconnexion</button>
+    </div>
+  </div>
+
+  <!-- Statistiques par session -->
+  <div class="card session-summary">
+    <div class="stats-toolbar">
+      <div>
+        <h3 style="font-weight:800;color:#0f1a2e;">📊 Statistiques par session</h3>
+        <p id="stats-session-caption" style="font-size:12px;color:#64748b;margin-top:3px;">Chargement de la session active...</p>
+      </div>
+      <select id="session-filter" onchange="changerSession()">
+        <option value="">Chargement...</option>
+      </select>
+    </div>
+
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat"><div class="val" id="stat-paye">—</div><div class="lbl">Payé / validé</div></div>
+      <div class="stat"><div class="val" id="stat-examens">—</div><div class="lbl">Examens</div></div>
+      <div class="stat"><div class="val" id="stat-recettes-session">—</div><div class="lbl">Recettes session</div></div>
+    </div>
+
+    <details>
+      <summary style="cursor:pointer;font-weight:700;color:#334155;padding:8px 0;">Voir le comparatif de toutes les sessions</summary>
+      <div class="table-wrap" style="margin-top:8px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Session</th>
+              <th>Tutoriels</th>
+              <th>Examens</th>
+              <th>Payé / validé</th>
+              <th>En attente</th>
+              <th>Annulé</th>
+              <th>Recettes</th>
+            </tr>
+          </thead>
+          <tbody id="sessions-stats-body">
+            <tr><td colspan="7" style="text-align:center;color:#64748b;">Chargement...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+
+  <!-- Onglets -->
+  <div class="tabs">
+    <button class="tab active" data-tab="tab-commandes" onclick="switchTab('tab-commandes')">📋 Commandes</button>
+    <button class="tab" data-tab="tab-matieres" onclick="switchTab('tab-matieres')">📚 Matières disponibles</button>
+    <button class="tab" data-tab="tab-parametres" onclick="switchTab('tab-parametres')">⚙️ Paramètres</button>
+    <button class="tab" data-tab="tab-erreurs" onclick="switchTab('tab-erreurs')">⚠️ Erreurs</button>
+  </div>
+
+  <!-- Onglet Commandes -->
+  <div id="tab-commandes" class="tab-content active">
+    <div class="card">
+      <div class="filters">
+        <input type="text" id="search-input" class="search-input" placeholder="Rechercher (matricule, WhatsApp, réf, ID)" oninput="chargerCommandes(1)">
+        <select id="statut-filter" onchange="chargerCommandes(1)" style="padding:8px 14px;border-radius:10px;border:1.5px solid #e2e6ea;">
+          <option value="">Tous les statuts</option>
+          <option value="En attente">En attente</option>
+          <option value="Payé" selected>Payé</option>
+          <option value="Validé">Validé manuellement</option>
+          <option value="Envoyé">Envoyé</option>
+          <option value="Échec">Échec</option>
+          <option value="Annul">Annulé</option>
+        </select>
+        <select id="matiere-filter" onchange="chargerCommandes(1)" style="padding:8px 14px;border-radius:10px;border:1.5px solid #e2e6ea;min-width:240px;">
+          <option value="">Toutes les matières</option>
+          <option value="Infobase">Informatique de base</option>
+          <option value="GBD">Gestion de base de données</option>
+          <option value="Sage Gestion N1">Sage Gestion Commerciale 1</option>
+          <option value="Sage Compta N1">Sage Comptabilité N1</option>
+          <option value="Sage Gestion N2">Sage Gestion Commerciale 2</option>
+          <option value="Sage Compta N2">Sage Comptabilité N2</option>
+          <option value="PGI/ERP">Progiciel de gestion intégré (PGI)</option>
+          <option value="Outils Com">Outils de communication</option>
+          <option value="GSW">Gestion de site Web (GSW)</option>
+          <option value="PAO">Publication Assistée par Ordinateur (PAO)</option>
+          <option value="HTML/CSS">HTML &amp; CSS</option>
+          <option value="SGBDR">SGBDR</option>
+          <option value="IA">IA et la prise de décision</option>
+          <option value="Ciel Compta N1">Ciel Comptabilité N1</option>
+          <option value="Ciel Compta N2">Ciel Comptabilité N2</option>
+        </select>
+        <button class="btn btn-outline" onclick="exporterCSV()">📤 Exporter CSV</button>
+        <button class="btn btn-primary" onclick="chargerCommandes()">🔄 Actualiser</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Date</th>
+              <th>Session</th>
+              <th>Matricule</th>
+              <th>WhatsApp</th>
+              <th>Email</th>
+              <th>Type</th>
+              <th>Matières</th>
+              <th>Réf</th>
+            </tr>
+          </thead>
+          <tbody id="commandes-body">
+            <tr><td colspan="9" style="text-align:center;color:#5a6a7a;">Chargement...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="pagination-container" class="pagination"></div>
+    </div>
+  </div>
+
+  <!-- Onglet Matières disponibles -->
+  <div id="tab-matieres" class="tab-content">
+    <div class="card">
+      <h3 style="margin-bottom:4px;font-weight:700;">📚 Matières disponibles</h3>
+      <p style="font-size:13px;color:#5a6a7a;margin-bottom:20px;">Catalogue actuellement proposé aux étudiants. Les matières marquées <strong>Examen uniquement</strong> ne sont pas disponibles pour les tutoriels.</p>
+
+      <div class="matieres-grid">
+        <section class="matiere-grade">
+          <div class="matiere-grade-title">Grade Licence</div>
+
+          <div class="matiere-niveau">
+            <h4>Niveau L1</h4>
+            <ul class="matiere-liste">
+              <li><span class="matiere-nom">Informatique de base</span><span class="badge-dispo badge-tuto-exam">Tuto + Examen</span></li>
+            </ul>
+          </div>
+
+          <div class="matiere-niveau">
+            <h4>Niveau L2</h4>
+            <ul class="matiere-liste">
+              <li><span class="matiere-nom">Gestion de base de données</span><span class="badge-dispo badge-tuto-exam">Tuto + Examen</span></li>
+              <li><span class="matiere-nom">Sage Gestion Commerciale 1</span><span class="badge-dispo badge-tuto-exam">Tuto + Examen</span></li>
+              <li><span class="matiere-nom">Sage Comptabilité N1</span><span class="badge-dispo badge-tuto-exam">Tuto + Examen</span></li>
+            </ul>
+          </div>
+
+          <div class="matiere-niveau">
+            <h4>Niveau L3</h4>
+            <ul class="matiere-liste">
+              <li><span class="matiere-nom">Sage Gestion Commerciale 2</span><span class="badge-dispo badge-tuto-exam">Tuto + Examen</span></li>
+              <li><span class="matiere-nom">Sage Comptabilité N2</span><span class="badge-dispo badge-tuto-exam">Tuto + Examen</span></li>
+              <li><span class="matiere-nom">Progiciel de gestion intégré (PGI)</span><span class="badge-dispo badge-tuto-exam">Tuto + Examen</span></li>
+              <li><span class="matiere-nom">Outils de communication</span><span class="badge-dispo badge-tuto-exam">Tuto + Examen</span></li>
+              <li><span class="matiere-nom">Gestion de site Web (GSW)</span><span class="badge-dispo badge-tuto-exam">Tuto + Examen</span></li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="matiere-grade">
+          <div class="matiere-grade-title">Grade Master</div>
+
+          <div class="matiere-niveau">
+            <h4>Niveau M1</h4>
+            <ul class="matiere-liste">
+              <li><span class="matiere-nom">Publication Assistée par Ordinateur (PAO)</span><span class="badge-dispo badge-tuto-exam">Tuto + Examen</span></li>
+              <li><span class="matiere-nom">HTML &amp; CSS</span><span class="badge-dispo badge-tuto-exam">Tuto + Examen</span></li>
+              <li><span class="matiere-nom">SGBDR</span><span class="badge-dispo badge-tuto-exam">Tuto + Examen</span></li>
+            </ul>
+          </div>
+
+          <div class="matiere-niveau">
+            <h4>Niveau M2</h4>
+            <ul class="matiere-liste">
+              <li><span class="matiere-nom">IA et la prise de décision.</span><span class="badge-dispo badge-exam-only">Examen uniquement</span></li>
+            </ul>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Onglet Paramètres -->
+  <div id="tab-parametres" class="tab-content">
+    <div class="card" style="max-width:560px;">
+      <h3 style="margin-bottom:4px;font-weight:700;">⚙️ Paramètres de session</h3>
+      <p style="font-size:13px;color:#5a6a7a;margin-bottom:20px;">Vague active et périodes pendant lesquelles les étudiants peuvent faire une demande.</p>
+
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Vague / Session (ex : 370)</label>
+      <input type="text" id="cfg-vague" style="width:100%;padding:9px 12px;border:1.5px solid #e2e6ea;border-radius:10px;font-size:14px;margin-bottom:18px;" placeholder="Ex: 370">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Tutoriels — début</label>
+          <input type="date" id="cfg-tuto-debut" style="width:100%;padding:9px 12px;border:1.5px solid #e2e6ea;border-radius:10px;font-size:14px;">
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Tutoriels — fin</label>
+          <input type="date" id="cfg-tuto-fin" style="width:100%;padding:9px 12px;border:1.5px solid #e2e6ea;border-radius:10px;font-size:14px;">
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Examens — début</label>
+          <input type="date" id="cfg-exam-debut" style="width:100%;padding:9px 12px;border:1.5px solid #e2e6ea;border-radius:10px;font-size:14px;">
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Examens — fin</label>
+          <input type="date" id="cfg-exam-fin" style="width:100%;padding:9px 12px;border:1.5px solid #e2e6ea;border-radius:10px;font-size:14px;">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" style="margin-top:16px;" onclick="enregistrerParametres()">💾 Enregistrer</button>
+      <span id="cfg-status" style="margin-left:12px;font-size:13px;"></span>
+    </div>
+  </div>
+
+  <!-- Onglet Erreurs -->
+  <div id="tab-erreurs" class="tab-content">
+    <div class="card">
+      <h3 style="margin-bottom:12px;font-weight:600;">Logs d'erreurs (WhatsApp, e-mail)</h3>
+      <div id="erreurs-container">
+        <p style="color:#5a6a7a;">Chargement...</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ============================================================
+  // CONFIGURATION
+  // ============================================================
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwReJffIptwkKou4qK8vaIYoVRIAPR9QH7yENyhtjJE_QCRejAd-8v1ExA_Z8lwdIvmJg/exec";
+  let sessionToken = null;
+  let autoRefreshInterval = null;
+  let currentPage = 1;
+  let totalCommandes = 0;
+  let sessionSelectionnee = '';
+  let sessionActive = '';
+  const LIMIT = 20;
+
+  // Correspondance entre les codes internes et les intitulés affichés aux étudiants.
+  // Cette liste ne modifie ni les commandes ni les paiements : elle améliore uniquement l'affichage admin.
+  const LIBELLES_MATIERES = {
+    'Infobase': 'Informatique de base',
+    'GBD': 'Gestion de base de données',
+    'Sage Gestion N1': 'Sage Gestion Commerciale 1',
+    'Sage Compta N1': 'Sage Comptabilité N1',
+    'Sage Gestion N2': 'Sage Gestion Commerciale 2',
+    'Sage Compta N2': 'Sage Comptabilité N2',
+    'PGI/ERP': 'Progiciel de gestion intégré (PGI)',
+    'Outils Com': 'Outils de communication',
+    'GSW': 'Gestion de site Web (GSW)',
+    'PAO': 'Publication Assistée par Ordinateur (PAO)',
+    'HTML/CSS': 'HTML & CSS',
+    'SGBDR': 'SGBDR',
+    'IA': 'IA et la prise de décision.',
+    'Ciel Compta N1': 'Ciel Comptabilité N1',
+    'Ciel Compta N2': 'Ciel Comptabilité N2'
+  };
+
+  function formaterMatieresPourAffichage(matieres) {
+    return String(matieres || '')
+      .split(',')
+      .map(m => m.trim())
+      .filter(Boolean)
+      .map(m => LIBELLES_MATIERES[m] || m)
+      .join(', ');
+  }
+
+  // Échappement HTML (anti-XSS) pour les données affichées
+  function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // POST sans préflight CORS
+  function apiPost(payload){
+    return fetch(WEB_APP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(Object.assign({ sessionToken: sessionToken }, payload)) }).then(r=>r.json());
+  }
+  // GET (lectures)
+  function apiGet(params){
+    const qp = new URLSearchParams(Object.assign({ sessionToken: sessionToken }, params));
+    return fetch(WEB_APP_URL + '?' + qp).then(r=>r.json());
+  }
+
+  // ============================================================
+  // AUTHENTIFICATION
+  // ============================================================
+  function login() {
+    const pwd = document.getElementById('pwd-input').value.trim();
+    const btn = document.getElementById('btn-login');
+    const err = document.getElementById('login-err');
+    if (!pwd) { err.textContent = 'Veuillez entrer le mot de passe.'; err.style.display = 'block'; return; }
+    btn.disabled = true; btn.textContent = 'Connexion...';
+    err.style.display = 'none';
+
+    apiPost({ action:'login', password: pwd })
+      .then(data => {
+        if (data.status === 'ok' && data.sessionToken) {
+          sessionToken = data.sessionToken;
+          sessionStorage.setItem('imgam_session_token', sessionToken);
+          ouvrirDashboard();
+        } else {
+          err.textContent = data.message || 'Mot de passe incorrect.';
+          err.style.display = 'block';
+          btn.disabled = false; btn.textContent = 'Se connecter';
+        }
+      })
+      .catch(() => {
+        err.textContent = 'Erreur réseau.';
+        err.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Se connecter';
+      });
+  }
+
+  function ouvrirDashboard(){
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    chargerCommandes(1);
+    chargerStats();
+    chargerEnteteConfig();
+    chargerErreurs();
+    demarrerAutoRefresh();
+  }
+
+  // Affiche la vague + les périodes dans le bandeau supérieur
+  function chargerEnteteConfig(){
+    if (!sessionToken) return;
+    apiGet({ action:'getConfig' })
+      .then(data => {
+        if (data.status === 'error') return;
+        const c = data.config || {};
+        const fmt = s => {
+          if(!s) return ''; s = String(s);
+          if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.split('-').reverse().join('-');
+          const d = new Date(s);
+          if(!isNaN(d.getTime())) return String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();
+          return s;
+        };
+        const periode = (d, f) => (d && f) ? (fmt(d) + ' → ' + fmt(f)) : '—';
+        const parts = [];
+        if (c.Vague_Active) parts.push('🏷️ Session <strong>' + esc(c.Vague_Active) + '</strong>');
+        parts.push('📘 Tuto ' + esc(periode(c.Tuto_Debut, c.Tuto_Fin)));
+        parts.push('📝 Examen ' + esc(periode(c.Examen_Debut, c.Examen_Fin)));
+        document.getElementById('session-info').innerHTML = parts.join(' &nbsp;·&nbsp; ');
+      })
+      .catch(() => {});
+  }
+
+  function logout() {
+    sessionToken = null;
+    sessionStorage.removeItem('imgam_session_token');
+    clearInterval(autoRefreshInterval);
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('dashboard').style.display = 'none';
+  }
+
+  // Vérifier la session au chargement
+  window.addEventListener('DOMContentLoaded', function() {
+    const stored = sessionStorage.getItem('imgam_session_token');
+    if (stored) {
+      sessionToken = stored;
+      apiGet({ action:'getCommandes', limit:1 })
+        .then(data => {
+          if (data.status === 'error' && (data.message||'').includes('Session')) logout();
+          else ouvrirDashboard();
+        })
+        .catch(() => logout());
+    }
+  });
+
+  // ============================================================
+  // CHARGEMENT DES COMMANDES
+  // ============================================================
+  function chargerCommandes(page) {
+    if (!sessionToken) return;
+    currentPage = page || currentPage;
+    const search = document.getElementById('search-input').value.trim();
+    const statut = document.getElementById('statut-filter').value;
+    const matiere = document.getElementById('matiere-filter').value;
+    apiGet({ action:'getCommandes', recherche:search, statut:statut, matiere:matiere, session:sessionSelectionnee || '', page:currentPage, limit:LIMIT })
+      .then(data => {
+        if (data.status === 'error' && (data.message||'').includes('Session')) { logout(); return; }
+        afficherCommandes(data.commandes || []);
+        totalCommandes = data.total || 0;
+        afficherPagination(totalCommandes, currentPage);
+      })
+      .catch(() => {});
+  }
+
+  function badgePour(statut){
+    if (statut.includes('Payé') || statut.includes('Validé')) return 'badge-paye';
+    if (statut.includes('Envoyé')) return 'badge-envoye';
+    if (statut.includes('Échec') || statut.includes('Echec')) return 'badge-echec';
+    if (statut.includes('Annul')) return 'badge-annule';
+    return 'badge-attente';
+  }
+
+  function afficherCommandes(commandes) {
+    const tbody = document.getElementById('commandes-body');
+    if (!commandes.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#5a6a7a;">Aucune commande trouvée</td></tr>';
+      return;
+    }
+    let html = '';
+    commandes.forEach(c => {
+      const matieres = formaterMatieresPourAffichage(c.matieres || '');
+      const shortMat = matieres.length > 30 ? matieres.substring(0,30)+'…' : matieres;
+      html += `<tr>
+        <td><strong>${esc(c.id)||'—'}</strong></td>
+        <td>${esc(c.date)||'—'}</td>
+        <td><span class="badge badge-envoye">${esc(c.session)||'Sans session'}</span></td>
+        <td>${esc(c.matricule)||'—'}</td>
+        <td>${esc(c.whatsapp)||'—'}</td>
+        <td>${esc(c.email)||'—'}</td>
+        <td>${esc(c.type)||'—'}</td>
+        <td title="${esc(matieres)}">${esc(shortMat)}</td>
+        <td>${esc(c.ref)||'—'}</td>
+      </tr>`;
+    });
+    tbody.innerHTML = html;
+  }
+
+  function afficherPagination(total, page) {
+    const container = document.getElementById('pagination-container');
+    const totalPages = Math.ceil(total / LIMIT);
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+    // Fenêtre glissante : Préc / pages proches / Suiv
+    let html = `<button ${page<=1?'disabled':''} data-go="${page-1}">←</button>`;
+    const start = Math.max(1, page-2), end = Math.min(totalPages, page+2);
+    if (start > 1) html += `<button data-go="1">1</button>` + (start>2?'<span>…</span>':'');
+    for (let i = start; i <= end; i++) html += `<button class="${i===page?'active':''}" data-go="${i}">${i}</button>`;
+    if (end < totalPages) html += (end<totalPages-1?'<span>…</span>':'') + `<button data-go="${totalPages}">${totalPages}</button>`;
+    html += `<button ${page>=totalPages?'disabled':''} data-go="${page+1}">→</button>`;
+    container.innerHTML = html;
+    container.querySelectorAll('button[data-go]').forEach(b => { if(!b.disabled) b.addEventListener('click', () => chargerCommandes(parseInt(b.dataset.go,10))); });
+  }
+
+  // ============================================================
+  // STATISTIQUES (calculées côté serveur sur l'ensemble)
+  // ============================================================
+  function formaterMontant(valeur) {
+    return new Intl.NumberFormat('fr-FR').format(Number(valeur || 0)) + ' Ar';
+  }
+
+  function remplirFiltreSessions(data) {
+    const select = document.getElementById('session-filter');
+    const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+    const valeurActuelle = sessionSelectionnee || data.sessionFiltre || data.activeSession || '';
+
+    let html = '<option value="__ALL__">Toutes les sessions</option>';
+    sessions.forEach(s => {
+      const actif = s === data.activeSession ? ' — active' : '';
+      html += '<option value="' + esc(s) + '">' + esc(s) + actif + '</option>';
+    });
+    select.innerHTML = html;
+
+    sessionActive = data.activeSession || '';
+    sessionSelectionnee = valeurActuelle || sessionActive || '__ALL__';
+    if (![...select.options].some(o => o.value === sessionSelectionnee)) {
+      sessionSelectionnee = sessionActive && [...select.options].some(o => o.value === sessionActive)
+        ? sessionActive : '__ALL__';
+    }
+    select.value = sessionSelectionnee;
+  }
+
+  function afficherComparatifSessions(data) {
+    const tbody = document.getElementById('sessions-stats-body');
+    const lignes = Array.isArray(data.parSession) ? data.parSession : [];
+    if (!lignes.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;">Aucune donnée</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lignes.map(s => {
+      const classe = s.session === data.sessionFiltre ? 'session-row active' : 'session-row';
+      return `<tr class="${classe}" data-session="${esc(s.session)}" title="Afficher cette session">
+        <td>${esc(s.session)}${s.session === data.activeSession ? ' <span class="badge badge-paye">Active</span>' : ''}</td>
+        <td>${s.tutoriels || 0}</td>
+        <td>${s.examens || 0}</td>
+        <td>${s.paye || 0}</td>
+        <td>${s.attente || 0}</td>
+        <td>${s.annule || 0}</td>
+        <td>${formaterMontant(s.recettes || 0)}</td>
+      </tr>`;
+    }).join('');
+    tbody.querySelectorAll('tr[data-session]').forEach(tr => {
+      tr.addEventListener('click', () => {
+        sessionSelectionnee = tr.dataset.session;
+        document.getElementById('session-filter').value = sessionSelectionnee;
+        chargerStats();
+        chargerCommandes(1);
+      });
+    });
+  }
+
+  function changerSession() {
+    sessionSelectionnee = document.getElementById('session-filter').value || '__ALL__';
+    chargerStats();
+    chargerCommandes(1);
+  }
+
+  function chargerStats() {
+    if (!sessionToken) return;
+    apiGet({ action:'getStatsAdmin', session:sessionSelectionnee || '' })
+      .then(data => {
+        if (data.status === 'error' && (data.message||'').includes('Session')) { logout(); return; }
+
+        remplirFiltreSessions(data);
+        document.getElementById('stat-paye').textContent = data.paye || 0;
+        document.getElementById('stat-examens').textContent = data.examens || 0;
+        document.getElementById('stat-recettes-session').textContent = formaterMontant(data.recettes || 0);
+
+        const libelle = data.sessionFiltre
+          ? 'Résultats de la session « ' + data.sessionFiltre + ' »'
+          : 'Résultats cumulés de toutes les sessions';
+        document.getElementById('stats-session-caption').textContent =
+          libelle + (data.activeSession ? ' — session active : ' + data.activeSession : '');
+
+        afficherComparatifSessions(data);
+      })
+      .catch(() => {
+        document.getElementById('stats-session-caption').textContent = 'Impossible de charger les statistiques.';
+      });
+  }
+
+  // ============================================================
+  // ERREURS
+  // ============================================================
+  function chargerErreurs() {
+    if (!sessionToken) return;
+    apiGet({ action:'getErreurs', limit:50 })
+      .then(data => {
+        if (data.status === 'error' && (data.message||'').includes('Session')) { logout(); return; }
+        const container = document.getElementById('erreurs-container');
+        if (!data.length) { container.innerHTML = '<p style="color:#5a6a7a;">Aucune erreur récente.</p>'; return; }
+        let html = '';
+        data.forEach(e => {
+          html += `<div class="erreur-item">
+            <span class="contexte">${esc(e.contexte)||'—'}</span>
+            <span style="color:#64748b;margin-left:12px;">${esc(e.timestamp)}</span>
+            <br><span style="color:#991b1b;">${esc(e.erreur)}</span>
+            <br><span style="font-size:12px;color:#6b7280;">${esc(e.donnees)}</span>
+          </div>`;
+        });
+        container.innerHTML = html;
+      })
+      .catch(() => {});
+  }
+
+  // ============================================================
+  // ACTIONS ADMIN (mutations → POST)
+  // ============================================================
+  function renvoyerLiens(id) {
+    if (!confirm('Renvoyer les accès pour la commande ' + id + ' ?')) return;
+    apiPost({ action:'renvoyerLiens', id:id })
+      .then(data => { alert(data.message || 'Accès renvoyés.'); chargerCommandes(); })
+      .catch(() => alert('Erreur.'));
+  }
+
+  function validerManuel(id) {
+    if (!confirm('Valider manuellement la commande ' + id + ' ? (les accès seront envoyés)')) return;
+    apiPost({ action:'validerManuel', id:id })
+      .then(data => { alert(data.message || 'Commande validée.'); chargerCommandes(); chargerStats(); })
+      .catch(() => alert('Erreur.'));
+  }
+
+  function annulerCommande(id) {
+    if (!confirm('Annuler la commande ' + id + ' ? Cette action est définitive.')) return;
+    apiPost({ action:'annulerCommande', id:id })
+      .then(data => { alert(data.message || 'Commande annulée.'); chargerCommandes(); chargerStats(); })
+      .catch(() => alert('Erreur.'));
+  }
+
+  function exporterCSV() {
+    if (!sessionToken) return;
+    const search = document.getElementById('search-input').value.trim();
+    const statut = document.getElementById('statut-filter').value;
+    const matiere = document.getElementById('matiere-filter').value;
+    const url = WEB_APP_URL + '?action=exportCSV&sessionToken=' + encodeURIComponent(sessionToken) +
+                '&recherche=' + encodeURIComponent(search) +
+                '&statut=' + encodeURIComponent(statut) +
+                '&matiere=' + encodeURIComponent(matiere) +
+                '&session=' + encodeURIComponent(sessionSelectionnee || '');
+    window.open(url, '_blank');
+  }
+
+  // ============================================================
+  // ONGLETS / AUTO-REFRESH
+  // ============================================================
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('active');
+    if (tabId === 'tab-erreurs') chargerErreurs();
+    if (tabId === 'tab-parametres') chargerParametres();
+  }
+
+  // ============================================================
+  // PARAMÈTRES (vague + périodes)
+  // ============================================================
+  function chargerParametres() {
+    if (!sessionToken) return;
+    apiGet({ action:'getConfig' })
+      .then(data => {
+        if (data.status === 'error' && (data.message||'').includes('Session')) { logout(); return; }
+        const c = data.config || {};
+        document.getElementById('cfg-vague').value = c.Vague_Active || '';
+        document.getElementById('cfg-tuto-debut').value = c.Tuto_Debut || '';
+        document.getElementById('cfg-tuto-fin').value = c.Tuto_Fin || '';
+        document.getElementById('cfg-exam-debut').value = c.Examen_Debut || '';
+        document.getElementById('cfg-exam-fin').value = c.Examen_Fin || '';
+      })
+      .catch(() => {});
+  }
+
+  function enregistrerParametres() {
+    const statusEl = document.getElementById('cfg-status');
+    const parametres = {
+      Vague_Active: document.getElementById('cfg-vague').value.trim(),
+      Tuto_Debut:   document.getElementById('cfg-tuto-debut').value,
+      Tuto_Fin:     document.getElementById('cfg-tuto-fin').value,
+      Examen_Debut: document.getElementById('cfg-exam-debut').value,
+      Examen_Fin:   document.getElementById('cfg-exam-fin').value
+    };
+    statusEl.textContent = 'Enregistrement...'; statusEl.style.color = '#5a6a7a';
+    apiPost({ action:'majConfig', parametres: parametres })
+      .then(data => {
+        if (data.status === 'ok') { statusEl.textContent = '✅ ' + data.message; statusEl.style.color = '#1a8a5a'; chargerEnteteConfig(); chargerStats(); }
+        else { statusEl.textContent = '❌ ' + (data.message || 'Erreur'); statusEl.style.color = '#c0392b'; }
+      })
+      .catch(() => { statusEl.textContent = '❌ Erreur réseau.'; statusEl.style.color = '#c0392b'; });
+  }
+
+  function demarrerAutoRefresh() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(() => { chargerCommandes(); chargerStats(); }, 30000);
+  }
+
+  // Exposer les fonctions globales utilisées dans le HTML
+  window.login = login;
+  window.logout = logout;
+  window.switchTab = switchTab;
+  window.chargerCommandes = chargerCommandes;
+  window.changerSession = changerSession;
+  window.exporterCSV = exporterCSV;
+  window.enregistrerParametres = enregistrerParametres;
+</script>
+</body>
+</html>

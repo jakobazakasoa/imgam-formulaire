@@ -225,8 +225,11 @@
       <h3 class="font-bold text-emerald-800 text-sm mb-2 flex items-center gap-2">📲 Informations de paiement MVola</h3>
       <div class="row"><span class="text-slate-600">Numéro MVola :</span> <strong class="text-emerald-900 tracking-wide">034 16 948 39</strong></div>
       <div class="row"><span class="text-slate-600">Bénéficiaire :</span> <strong class="text-emerald-900">IMGAM</strong></div>
-      <div class="row"><span class="text-slate-600">Tarif :</span> <strong class="text-emerald-900">6 500 Ar / matière</strong></div>
+      <div class="row"><span class="text-slate-600">Tarif :</span> <strong class="text-emerald-900">6 500 Ar / cours</strong></div>
       <div class="row"><span class="text-slate-600">Montant exact :</span> <strong class="text-emerald-900 text-base" id="montant-exact">0 Ar</strong></div>
+      <p class="mt-3 text-xs text-emerald-900 bg-white/70 border border-emerald-100 rounded-lg p-3">
+        Une seule transaction MVola peut régler 1, 2 ou 3 cours, si son montant couvre le total affiché. Si vous payez en plusieurs dépôts, saisissez toutes les références. Maximum : 3 cours par commande.
+      </p>
       <div class="row"><span class="text-slate-600">Délai de traitement :</span> <strong class="text-emerald-900">Moins de 5 minutes</strong></div>
       <div class="row"><span class="text-slate-600">Support :</span> <a href="https://wa.me/261341694839" target="_blank" class="support-link">+261 34 169 48 39</a></div>
     </div>
@@ -237,7 +240,7 @@
   <!-- ÉTAPE 3 -->
   <div id="step3" class="step-content">
     <h2 class="sec-title mb-2"><span class="ic">🔑</span> Saisissez la référence MVola</h2>
-    <p class="text-sm text-slate-500 mb-5">Entrez la ou les références reçues par SMS. Si vous avez payé en plusieurs dépôts, séparez les références par une virgule.</p>
+    <p class="text-sm text-slate-500 mb-5">Entrez la référence de votre dépôt. Une seule référence suffit si le dépôt couvre le total de 1, 2 ou 3 cours. Si vous avez payé en plusieurs dépôts, saisissez toutes les références séparées par une virgule.</p>
     <div><label class="imgam-label">Référence(s) MVola <span class="font-normal text-slate-400 tracking-normal">(une ou plusieurs, séparées par une virgule)</span></label><input type="text" id="ref-paiement" inputmode="text" autocomplete="off" placeholder="Ex. 10545684768, 10545751168" class="imgam-field font-mono text-lg text-center tracking-[.08em]"></div>
     <button id="btn-verifier" class="btn btn-success w-full mt-4">Vérifier mon paiement</button>
     <div id="paiement-status" class="mt-3 text-sm"></div>

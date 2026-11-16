@@ -165,6 +165,16 @@
     <span id="session-badge" class="badge mt-3" style="display:none;"></span>
   </div>
 
+  <details id="recuperation" class="mb-5 border border-slate-200 rounded-xl p-4">
+    <summary class="font-bold text-sky-800 cursor-pointer">Retrouver ma commande / Renvoyer mes accès</summary>
+    <p class="text-sm text-slate-600 mt-2">Déjà payé ? Retrouvez votre commande sans nouveau paiement.</p>
+    <label class="imgam-label mt-3" for="rec-mat">N° Matricule</label><input id="rec-mat" class="imgam-field" autocomplete="off">
+    <label class="imgam-label mt-3" for="rec-email">Email initial de la commande</label><input id="rec-email" type="email" class="imgam-field">
+    <label class="imgam-label mt-3" for="rec-ref">Référence(s) MVola (toutes les références du paiement)</label><input id="rec-ref" class="imgam-field" autocomplete="off">
+    <button type="button" id="rec-search" class="btn btn-primary w-full mt-3">Retrouver ma commande</button>
+    <div id="rec-result" class="mt-3 text-sm" aria-live="polite"></div>
+    <button type="button" id="rec-send" class="btn btn-success w-full mt-3 hidden">Renvoyer mes accès par email</button>
+  </details>
   <!-- Indicateur d'étapes -->
   <div class="step-indicator">
     <div class="step-dot active" data-step="1"><div class="circle">1</div><span class="label">Matières</span></div>
@@ -251,7 +261,7 @@
   <div id="step4" class="step-content text-center py-6">
     <div class="text-6xl mb-4 success-pop">🎉</div>
     <h2 class="text-2xl font-extrabold text-emerald-700">Commande validée !</h2>
-    <p class="text-slate-600 mb-5">Vos accès ont été envoyés par email.</p>
+    <p id="final-livraison" class="text-slate-600 mb-5">Vos accès ont été envoyés par email.</p>
     <div class="payment-info payment-info--mvola text-left text-sm mb-5"><p><strong class="text-slate-700">N° de commande :</strong> <span id="final-commande-id" class="font-mono text-emerald-800">—</span></p></div>
     <button onclick="location.reload()" class="btn btn-primary mx-auto px-7">Nouvelle commande</button>
   </div>
@@ -595,6 +605,7 @@
             commandeId = d.commandeId;
             matieresSelectionnees = matieres;
             document.getElementById('final-commande-id').textContent = d.commandeId || '—';
+            document.getElementById('final-livraison').textContent='Demande enregistrée. Consultez votre email pour les accès ou contactez IMGAM si vous ne les recevez pas.';
             goToStep(4);
           } else {
             statusEl.textContent = '❌ '+(d.message || 'Paiement du tutoriel introuvable.');
@@ -616,6 +627,12 @@
         if(d.status==='ok'){
           commandeId = d.commandeId;
           matieresSelectionnees = matieres;
+          if(d.etat === 'deja_payee'){
+            statusEl.textContent='Votre commande est déjà payée. Aucun nouveau paiement nécessaire. Retrouvez vos accès ci-dessus.';
+            statusEl.className='mt-2 text-sm text-emerald-700';
+            ouvrirRecuperation(mat,em,'');
+            return;
+          }
           const total = d.montant;
           let html='<h3 class="font-bold text-slate-700 text-sm mb-2">📋 Récapitulatif</h3>'
             + '<div class="row"><span>N° commande</span><strong class="font-mono">'+esc(commandeId)+'</strong></div>'
@@ -629,6 +646,7 @@
           document.getElementById('recap-content').innerHTML = html;
           document.getElementById('montant-exact').textContent = total+' Ar';
           goToStep(2);
+          if(d.etat==='reprise'){ statusEl.textContent='Votre commande en attente a été reprise.'; statusEl.className='mt-2 text-sm text-sky-700'; }
         } else {
           statusEl.textContent = '❌ '+(d.message||'Erreur lors de la création.');
           statusEl.className = 'mt-2 text-sm text-red-600';
@@ -651,11 +669,17 @@
     const btn=this; btn.disabled=true; btn.innerHTML='Vérification...';
     apiPost({ action:'verifierPaiement', commandeId:commandeId, ref:ref })
       .then(d=>{
-        if(d.valide){ document.getElementById('final-commande-id').textContent = d.commandeId || commandeId; statusEl.innerHTML=''; goToStep(4); }
+        if(d.valide){
+          document.getElementById('final-commande-id').textContent = d.commandeId || commandeId;
+          document.getElementById('final-livraison').textContent = d.livraison==='envoyee' ? 'Vos accès ont été envoyés par email. Vérifiez également les spams.' : (d.message || 'Paiement confirmé. Retrouvez votre commande pour vérifier ou renvoyer vos accès.');
+          statusEl.innerHTML=''; goToStep(4);
+          if(d.livraison!=='envoyee') ouvrirRecuperation(document.getElementById('matricule').value,document.getElementById('email').value,ref);
+        }
         else {
           // Le serveur A RÉPONDU : la référence est réellement rejetée (erronée / déjà utilisée / montant).
           // → message immédiat, on ne fait PAS patienter.
           statusEl.innerHTML='<span class="text-red-600">❌ '+esc(d.message)+'</span>';
+          if(['deja_payee','commande_traitee','ref_deja_utilisee'].includes(d.statut)) ouvrirRecuperation(document.getElementById('matricule').value,document.getElementById('email').value,ref);
           btn.disabled=false; btn.innerHTML='Vérifier mon paiement';
         }
       })
@@ -667,6 +691,41 @@
       });
   });
 
+  let recoveryCredentials = null;
+  function ouvrirRecuperation(mat,email,ref){
+    recoveryCredentials=null;
+    document.getElementById('rec-mat').value=mat.trim();
+    document.getElementById('rec-email').value=email.trim();
+    document.getElementById('rec-ref').value=ref.trim();
+    document.getElementById('rec-send').classList.add('hidden');
+    document.getElementById('rec-result').textContent='';
+    document.getElementById('recuperation').open=true;
+    document.getElementById('recuperation').scrollIntoView({behavior:'smooth'});
+  }
+  ['rec-mat','rec-email','rec-ref'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{
+    recoveryCredentials=null; document.getElementById('rec-send').classList.add('hidden'); document.getElementById('rec-result').textContent='';
+  }));
+  document.getElementById('rec-search').addEventListener('click', async function(){
+    const result=document.getElementById('rec-result'), send=document.getElementById('rec-send');
+    const credentials={matricule:document.getElementById('rec-mat').value.trim(),email:document.getElementById('rec-email').value.trim(),ref:document.getElementById('rec-ref').value.trim()};
+    recoveryCredentials=null; send.classList.add('hidden');
+    if(!credentials.matricule||!credentials.email||!credentials.ref){result.textContent='Remplissez les trois champs.';return;}
+    this.disabled=true; result.textContent='Recherche...';
+    try {const d=await apiPost({...credentials,action:'retrouverCommande'});
+      if(d.status!=='ok'){result.textContent=d.message||'Commande introuvable.';return;}
+      if(credentials.matricule!==document.getElementById('rec-mat').value.trim()||credentials.email!==document.getElementById('rec-email').value.trim()||credentials.ref!==document.getElementById('rec-ref').value.trim()){result.textContent='Informations modifiées. Relancez la recherche.';return;}
+      recoveryCredentials=credentials;
+      const noms=String(d.matieres||'').split(/[,;]\s*/).map(c=>Object.keys(CODES_MATIERES).find(n=>CODES_MATIERES[n]===c)||c).join(', ');
+      result.textContent='Paiement déjà validé — '+d.commandeId+' | '+noms+' | '+d.montant+' Ar | Session '+d.session+' | Paiement : '+(d.datePaiement||'non renseigné')+'. '+(d.dateEnvoi?'Dernier envoi enregistré : '+d.dateEnvoi+'. ':'Envoi non confirmé dans l’historique. Vous pouvez renvoyer vos accès. ')+'Aucun nouveau paiement nécessaire.';
+      send.classList.remove('hidden');
+    }catch(e){result.textContent='Service indisponible. Réessayez.';}finally{this.disabled=false;}
+  });
+  document.getElementById('rec-send').addEventListener('click',async function(){
+    if(!recoveryCredentials)return; this.disabled=true;
+    const result=document.getElementById('rec-result');
+    const demande=recoveryCredentials;
+    try{const d=await apiPost({...demande,action:'renvoiEtudiant'});if(recoveryCredentials===demande) result.textContent=d.message||'Renvoi non confirmé.';}catch(e){if(recoveryCredentials===demande) result.textContent='Renvoi non confirmé. Contactez IMGAM.';}finally{this.disabled=false;}
+  });
   // Initialisation
   window.addEventListener('DOMContentLoaded', ()=>{
     document.getElementById('grade-select').addEventListener('change', choisirGrade);

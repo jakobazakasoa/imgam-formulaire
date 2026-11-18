@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IMGAM — Commandes et paiements v29.2</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <title>IMGAM v29.3 — Commande de cours</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -154,127 +153,225 @@
     /* ---- Écran de succès ---- */
     .success-pop{ animation:pop .5s cubic-bezier(.2,.8,.3,1.2); }
     @keyframes pop{ 0%{ transform:scale(.4); opacity:0; } 60%{ transform:scale(1.12); } 100%{ transform:scale(1); opacity:1; } }
+  
+/* IMGAM v29.3 — interface compacte, le moteur Apps Script reste inchangé */
+body{padding:12px!important;align-items:flex-start!important;min-height:100vh}
+.imgam-card{margin:16px auto;max-width:620px!important;padding:22px!important;border-radius:24px!important}
+.step-indicator{margin:0 0 19px!important;gap:12px}
+.step-indicator::before{left:24%;right:24%;top:17px}
+.step-dot .label{font-size:12px!important;margin-top:5px}
+.step-dot .circle{height:34px;width:34px;font-size:13px}
+.sec-title{font-size:1.02rem!important;margin-bottom:12px!important;gap:7px}
+.sec-title .ic{width:30px;height:30px;border-radius:9px}
+.imgam-field{padding:.57rem .72rem!important;border-radius:10px!important;font-size:.9rem!important;min-height:42px}
+.imgam-label{font-size:.73rem!important;margin-bottom:4px!important}
+.btn{min-height:43px;padding:.68rem .9rem!important;border-radius:11px!important;font-size:.9rem!important}
+.counter-pill{padding:3px 9px!important}
+.type-toggle{width:100%;display:grid;grid-template-columns:1fr 1fr;padding:4px}
+.type-toggle label span{text-align:center;padding:.45rem .4rem!important}
+#matieres-container{padding:5px!important;max-height:185px!important;margin-top:7px!important;gap:5px}
+#matieres-container>label{padding:9px 10px!important;border-radius:10px!important}
+#selection-resume{padding:5px 8px!important;margin-top:7px!important;line-height:1.55}
+#selection-resume .inline-flex{padding:2px 7px!important;margin-top:2px!important}
+.payment-info{padding:12px!important;border-radius:12px!important}
+.payment-info .row,.matiere-item{padding:5px 0!important;font-size:.85rem!important}
+#recap-content{margin-bottom:12px!important}
+#recap-content h3{margin:0 0 3px!important;font-size:.83rem!important}
+#recap-content>.row:nth-of-type(n+2):nth-of-type(-n+5){display:none}
+#recap-content .mt-2{margin-top:4px!important}
+#recap-content .matiere-item{padding:3px 0!important}
+#payment-info-mvola,#payment-info-interop{margin-bottom:12px!important}
+#payment-method-choice{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
+#payment-method-choice label{padding:9px 5px!important;border-radius:11px!important;gap:4px!important;align-items:center;justify-content:center;flex-direction:column;text-align:center}
+#payment-method-choice label span{font-size:.77rem!important;line-height:1.2}
+#payment-method-choice label:has(input:checked){background:#ecfdf5!important;border:1.5px solid #059669!important;box-shadow:0 0 0 2px rgba(5,150,105,.07)}
+#payment-method-choice label:not(:has(input:checked)){background:#fff!important;border:1px solid #e2e8f0!important}
+#recuperation summary{list-style:none;cursor:pointer;color:#1e3a5f}
+#recuperation summary::-webkit-details-marker{display:none}
+#recuperation summary::after{content:'⌄';float:right;color:#64748b}
+#recuperation[open] summary::after{content:'⌃'}
+#recuperation .imgam-field{min-height:39px}
+#step3-title{margin-bottom:8px!important;font-size:.94rem!important}
+#payment-info-interop p,#mvola-reference-panel p,#interop-transactions-panel>p{font-size:.76rem!important;line-height:1.55}
+#interop-transactions-panel>p{margin-bottom:10px!important}
+#interop-rows>div{padding:12px!important}
+.interop-form-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px 10px}
+.interop-form-grid>div{min-width:0}
+.interop-form-grid .span2{grid-column:span 2}
+.interop-form-grid .imgam-field{width:100%;min-width:0}
+#paiement-status:not(:empty){padding:10px 11px;border-radius:10px;background:#fff7ed;margin-top:10px}
+#step4{padding-top:10px!important;padding-bottom:10px!important}
+#step4 .text-6xl{font-size:2.5rem!important;margin-bottom:9px!important}
+#step4 h2{font-size:1.28rem!important}
+#step4 .payment-info{margin-bottom:10px!important}
+.compact-details{font-size:.74rem;color:#64748b;line-height:1.45}
+.compact-meta{font-size:.73rem;color:#475569;line-height:1.4}
+.compact-divider{height:1px;background:#e5e7eb;margin:10px 0}
+.compact-actions{display:flex;align-items:center;gap:8px;margin-top:9px}
+.compact-actions .btn:first-child{flex:1}
+.compact-actions .btn:last-child{flex:0 0 auto}
+#step2 .btn-ghost{background:transparent;border:1px solid #dbe2ea}
+@media(max-width:520px){
+  body{padding:6px!important;background:#f5f8fc!important}
+  .imgam-card{padding:15px!important;margin:6px auto!important;border-radius:17px!important}
+  #payment-method-choice label span{font-size:.7rem!important}
+  .type-toggle label span{font-size:.78rem!important}
+  #step1 .compact-identity{grid-template-columns:1fr 1fr!important;gap:9px!important}
+  #step1 .compact-grades{grid-template-columns:1fr 1fr!important;gap:9px!important}
+  .imgam-title{font-size:1.32rem}
+}
+@media(max-width:355px){.interop-form-grid{grid-template-columns:1fr}.interop-form-grid .span2{grid-column:span 1}#payment-method-choice label span{font-size:.64rem!important}}
+
+  
+/* Utilitaires essentiels autonomes : pas de dépendance à Tailwind CDN. */
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{line-height:1.5}
+button,input,select{font:inherit}
+.hidden{display:none!important}
+.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}
+.flex-1{flex:1;min-width:0}
+.grid-cols-1{grid-template-columns:minmax(0,1fr)}
+.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.items-center{align-items:center}.justify-between{justify-content:space-between}.justify-center{justify-content:center}
+.gap-2{gap:8px}.gap-3{gap:12px}.w-full{width:100%}
+.mx-auto{margin-left:auto;margin-right:auto}.max-w-2xl{max-width:42rem}
+.mt-1{margin-top:4px}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.mt-4{margin-top:16px}.mt-5{margin-top:20px}
+.mb-1{margin-bottom:4px}.mb-2{margin-bottom:8px}.mb-3{margin-bottom:12px}.mb-4{margin-bottom:16px}.mb-5{margin-bottom:20px}
+.p-2{padding:8px}.p-3{padding:12px}.p-4{padding:16px}.p-6{padding:24px}
+.py-2{padding-top:8px;padding-bottom:8px}.py-6{padding-top:24px;padding-bottom:24px}
+.px-3{padding-left:12px;padding-right:12px}.px-7{padding-left:28px;padding-right:28px}
+.pt-3{padding-top:12px}
+.rounded-lg{border-radius:8px}.rounded-xl{border-radius:12px}.rounded-3xl{border-radius:24px}
+.border{border:1px solid #e2e8f0}.border-t{border-top:1px solid #e2e8f0}
+.border-slate-200{border-color:#e2e8f0}.border-sky-100{border-color:#e0f2fe}
+.border-emerald-300{border-color:#6ee7b7}
+.bg-sky-50{background:#f0f9ff}.bg-slate-50\/70{background:rgba(248,250,252,.7)}
+.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-semibold{font-weight:600}.font-medium{font-weight:500}.font-mono{font-family:ui-monospace,Consolas,monospace}
+.text-xs{font-size:.75rem}.text-sm{font-size:.875rem}.text-xl{font-size:1.25rem}.text-2xl{font-size:1.5rem}.text-6xl{font-size:3.75rem}
+.text-center{text-align:center}.text-left{text-align:left}
+.text-slate-400{color:#94a3b8}.text-slate-500{color:#64748b}.text-slate-600{color:#475569}.text-slate-700{color:#334155}
+.text-emerald-700{color:#047857}.text-emerald-800{color:#065f46}.text-emerald-900{color:#064e3b}
+.text-sky-900{color:#0c4a6e}.text-red-600{color:#dc2626}.text-amber-600{color:#d97706}
+.tracking-wide{letter-spacing:.025em}.cursor-pointer{cursor:pointer}
+.overflow-y-auto{overflow-y:auto}.max-h-48{max-height:12rem}
+.space-y-3>*+*{margin-top:12px}
+#recuperation{background:rgba(248,250,252,.85)}
+#recuperation summary:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+#step1 .compact-identity,#step1 .compact-grades{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+#step1 .compact-identity>div,#step1 .compact-grades>div{min-width:0}
+#payment-method-choice{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+#payment-method-choice label{display:flex}
+#recap-content .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#recap-content .matiere-item{display:flex;justify-content:space-between;gap:10px}
+#recap-content strong{overflow-wrap:anywhere}
+#selection-resume span{vertical-align:middle}
+#selection-resume .inline-flex{display:inline-flex;align-items:center;gap:5px}
+#selection-resume button{cursor:pointer;color:#0369a1;padding:0 4px}
+#btn-to-step2,#btn-verifier,#rec-search,#rec-send{display:flex;width:100%;justify-content:center;align-items:center}
+@media(min-width:640px){.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
   </style>
 </head>
 <body class="p-4 min-h-screen flex items-center justify-center">
 <div class="imgam-card rounded-3xl max-w-2xl w-full p-6 md:p-9">
 
-  <div class="text-center mb-7">
-    <h1 class="text-2xl md:text-3xl"><span aria-hidden="true">🎓</span> <span class="imgam-title">Formulaire</span></h1>
-    <p class="text-slate-500 text-sm mt-1">Commande de tutoriels et sujets d'examen</p>
-    <span id="session-badge" class="badge mt-3" style="display:none;"></span>
-  </div>
+  <header class="mb-4">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <h1 class="font-extrabold text-xl"><span aria-hidden="true">🎓</span> <span class="imgam-title">IMGAM — Cours</span></h1>
+        <p class="text-slate-500 text-xs mt-1">Commande rapide · Jusqu'à 3 matières</p>
+      </div>
+      <span id="session-badge" class="badge" style="display:none;"></span>
+    </div>
+  </header>
 
-  <details id="recuperation" class="mb-5 border border-slate-200 rounded-xl p-4">
-    <summary class="font-bold text-sky-800 cursor-pointer">Retrouver ma commande / Renvoyer mes accès</summary>
-    <p class="text-sm text-slate-600 mt-2">Déjà payé ? Retrouvez votre commande sans nouveau paiement.</p>
-    <label class="imgam-label mt-3" for="rec-mat">N° Matricule</label><input id="rec-mat" class="imgam-field" autocomplete="off">
-    <label class="imgam-label mt-3" for="rec-email">Email initial de la commande</label><input id="rec-email" type="email" class="imgam-field">
-    <label class="imgam-label mt-3" for="rec-ref">Référence(s) MVola ou Trans ID Orange/Airtel</label><input id="rec-ref" class="imgam-field" autocomplete="off" placeholder="Référence MVola ou Trans ID opérateur">
-    <button type="button" id="rec-search" class="btn btn-primary w-full mt-3">Retrouver ma commande</button>
+  <details id="recuperation" class="mb-4 border border-slate-200 bg-slate-50/70 rounded-xl p-3">
+    <summary class="text-sm font-bold">Déjà payé ? Retrouver ma commande</summary>
+    <p class="compact-details mt-2">Pour consulter votre paiement ou renvoyer vos accès, utilisez vos informations initiales.</p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+      <div><label class="imgam-label" for="rec-mat">Matricule</label><input id="rec-mat" class="imgam-field" autocomplete="off"></div>
+      <div><label class="imgam-label" for="rec-email">Email initial</label><input id="rec-email" type="email" class="imgam-field" autocomplete="email"></div>
+    </div>
+    <div class="mt-2"><label class="imgam-label" for="rec-ref">Référence MVola ou Trans ID</label><input id="rec-ref" class="imgam-field" autocomplete="off" placeholder="Référence du paiement"></div>
+    <button type="button" id="rec-search" class="btn btn-primary w-full mt-3">Rechercher ma commande</button>
     <div id="rec-result" class="mt-3 text-sm" aria-live="polite"></div>
     <button type="button" id="rec-send" class="btn btn-success w-full mt-3 hidden">Renvoyer mes accès par email</button>
   </details>
-  <!-- Indicateur d'étapes -->
-  <div class="step-indicator">
-    <div class="step-dot active" data-step="1"><div class="circle">1</div><span class="label">Matières</span></div>
+  <!-- 2 étapes seulement ; la confirmation est un écran de résultat -->
+  <div class="step-indicator" aria-label="Progression de la commande">
+    <div class="step-dot active" data-step="1"><div class="circle">1</div><span class="label">Mes cours</span></div>
     <div class="step-dot" data-step="2"><div class="circle">2</div><span class="label">Paiement</span></div>
-    <div class="step-dot" data-step="3"><div class="circle">3</div><span class="label">Référence</span></div>
-    <div class="step-dot" data-step="4"><div class="circle">4</div><span class="label">Confirmation</span></div>
   </div>
 
-  <!-- ÉTAPE 1 -->
+  <!-- ÉTAPE 1 : choix et coordonnées -->
   <div id="step1" class="step-content active">
-    <h2 class="sec-title mb-2"><span class="ic">📚</span> Sélectionnez votre matière informatique</h2>
-    <!-- <p class="text-sm text-slate-500 mb-5">Tarif : <strong class="text-sky-800">6 500 Ar</strong> une matière.</p>-->
-    <div class="mb-5">
-      <label class="imgam-label">Type de demande</label>
-      <div class="type-toggle">
-        <label><input type="radio" name="typeCommande" value="tutoriel" checked><span>📘 Tutoriel</span></label>
-        <label><input type="radio" name="typeCommande" value="examen"><span>📝 Sujet d'examen</span></label>
-      </div>
-      <div id="periode-info" class="mt-3 text-xs rounded-lg px-3 py-2" style="display:none;"></div>
+    <h2 class="sec-title"><span class="ic">📚</span> Choisir mes cours</h2>
+    <div class="type-toggle mb-3">
+      <label><input type="radio" name="typeCommande" value="tutoriel" checked><span>📘 Tutoriel</span></label>
+      <label><input type="radio" name="typeCommande" value="examen"><span>📝 Sujet d'examen</span></label>
     </div>
-    <div class="mb-5">
-      <div class="flex justify-between items-center">
-        <span class="text-sm font-semibold text-slate-700">Matières disponibles</span>
-        <span id="counter" class="counter-pill">0 / 3</span>
-      </div>
-      <p class="text-xs text-slate-500 mt-1">Choisissez d’abord votre grade et votre niveau, puis cochez les matières souhaitées.</p>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-        <div>
-          <label for="grade-select" class="imgam-label">Grade</label>
-          <select id="grade-select" class="imgam-field">
-            <option value="">— Sélectionnez le grade —</option>
-          </select>
-        </div>
-        <div>
-          <label for="niveau-select" class="imgam-label">Niveau</label>
-          <select id="niveau-select" class="imgam-field" disabled>
-            <option value="">— Sélectionnez d’abord le grade —</option>
-          </select>
-        </div>
-      </div>
-      <div id="selection-resume" class="mt-3 text-xs rounded-xl px-3 py-2 bg-sky-50 text-sky-900 border border-sky-100" style="display:none;"></div>
-      <div id="matieres-container" class="grid grid-cols-1 gap-2 mt-3 max-h-64 overflow-y-auto p-2 rounded-xl bg-slate-50/70 border border-slate-200"><p class="text-sm text-slate-400 p-2">Sélectionnez un grade puis un niveau.</p></div>
+    <div id="periode-info" class="mt-2 mb-3 text-xs rounded-lg px-3 py-2" style="display:none;"></div>
+    <div class="grid grid-cols-2 gap-2 compact-grades">
+      <div><label for="grade-select" class="imgam-label">Grade</label><select id="grade-select" class="imgam-field"><option value="">Choisir</option></select></div>
+      <div><label for="niveau-select" class="imgam-label">Niveau</label><select id="niveau-select" class="imgam-field" disabled><option value="">Choisir le grade</option></select></div>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-      <div><label class="imgam-label">N° Matricule <span class="text-red-500">*</span></label><input type="text" id="matricule" required placeholder="Ex: 49000 ou FM-5000" class="imgam-field"></div>
-      <div><label class="imgam-label">WhatsApp <span class="text-red-500">*</span></label><input type="tel" id="whatsapp" required placeholder="Votre N° WhatsApp" class="imgam-field"></div>
+    <div class="flex items-center justify-between mt-3 mb-1">
+      <span class="text-sm font-semibold text-slate-700">Matières</span>
+      <span id="counter" class="counter-pill">0 / 3</span>
     </div>
-    <div class="mt-3"><label class="imgam-label">Email <span class="text-red-500">*</span> <span class="font-normal text-slate-400 lowercase tracking-normal">(compte Google obligatoire pour l'accès Drive)</span></label><input type="email" id="email" required placeholder="nom@gmail.com" class="imgam-field"></div>
-    <button id="btn-to-step2" class="btn btn-primary w-full mt-5">Continuer →</button>
-    <div id="status-step1" class="mt-3 text-sm hidden"></div>
+    <div id="matieres-container" class="grid grid-cols-1 gap-2 mt-2 max-h-48 overflow-y-auto p-2 rounded-xl bg-slate-50/70 border border-slate-200" aria-label="Matières proposées"><p class="text-sm text-slate-400 p-2">Sélectionnez le grade et le niveau.</p></div>
+    <div id="selection-resume" class="mt-2 text-xs rounded-xl px-3 py-2 bg-sky-50 text-sky-900 border border-sky-100" style="display:none;"></div>
+    <div class="compact-divider"></div>
+    <h3 class="text-sm font-bold mb-2">Mes coordonnées</h3>
+    <div class="grid grid-cols-2 gap-2 compact-identity">
+      <div><label class="imgam-label" for="matricule">Matricule *</label><input id="matricule" type="text" class="imgam-field" required autocomplete="off" placeholder="Ex. 49830"></div>
+      <div><label class="imgam-label" for="whatsapp">WhatsApp *</label><input id="whatsapp" type="tel" class="imgam-field" required autocomplete="tel" placeholder="03X XX XXX XX"></div>
+    </div>
+    <div class="mt-2"><label for="email" class="imgam-label">Email Google (accès Drive) *</label><input id="email" class="imgam-field" type="email" required autocomplete="email" placeholder="nom@gmail.com"></div>
+    <button type="button" id="btn-to-step2" class="btn btn-primary w-full mt-4">Continuer vers le paiement →</button>
+    <div id="status-step1" class="mt-3 text-sm hidden" aria-live="polite"></div>
   </div>
 
-  <!-- ÉTAPE 2 -->
+  <!-- ÉTAPE 2 : paiement et preuve sur le même écran -->
   <div id="step2" class="step-content">
-    <h2 class="sec-title mb-4"><span class="ic">💳</span> Récapitulatif et paiement</h2>
-    <div id="recap-content" class="payment-info mb-4"></div>
-    <div class="mb-4">
-      <label class="imgam-label">Moyen de paiement</label>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2" id="payment-method-choice">
-        <label class="border border-emerald-300 bg-emerald-50 rounded-xl p-3 cursor-pointer flex items-center gap-2"><input type="radio" name="paymentMethod" value="mvola" checked><span class="font-semibold text-sm">MVola direct</span></label>
-        <label class="border border-slate-200 rounded-xl p-3 cursor-pointer flex items-center gap-2"><input type="radio" name="paymentMethod" value="orange_money"><span class="font-semibold text-sm">Orange Money</span></label>
-        <label class="border border-slate-200 rounded-xl p-3 cursor-pointer flex items-center gap-2"><input type="radio" name="paymentMethod" value="airtel_money"><span class="font-semibold text-sm">Airtel Money</span></label>
+    <h2 class="sec-title"><span class="ic">💳</span> Mon paiement</h2>
+    <div id="recap-content" class="payment-info mb-3"></div>
+    <label class="imgam-label">Moyen de paiement</label>
+    <div id="payment-method-choice" class="grid grid-cols-3 gap-2 mt-2 mb-3" role="group" aria-label="Moyen de paiement">
+      <label class="border border-emerald-300 rounded-xl p-3 cursor-pointer flex items-center gap-2"><input type="radio" name="paymentMethod" value="mvola" checked><span class="font-semibold text-sm">MVola</span></label>
+      <label class="border border-slate-200 rounded-xl p-3 cursor-pointer flex items-center gap-2"><input type="radio" name="paymentMethod" value="orange_money"><span class="font-semibold text-sm">Orange Money</span></label>
+      <label class="border border-slate-200 rounded-xl p-3 cursor-pointer flex items-center gap-2"><input type="radio" name="paymentMethod" value="airtel_money"><span class="font-semibold text-sm">Airtel Money</span></label>
+    </div>
+    <div id="payment-info-mvola" class="payment-info payment-info--mvola mb-3">
+      <div class="row"><span>Envoyer au MVola IMGAM</span><strong class="tracking-wide">034 16 948 39</strong></div>
+      <div class="row"><span>Montant requis</span><strong id="montant-exact" class="text-emerald-900">0 Ar</strong></div>
+      <p class="compact-details mt-2">1 dépôt suffit pour plusieurs cours. Si vous avez payé en plusieurs fois, indiquez toutes les références.</p>
+    </div>
+    <div id="payment-info-interop" class="payment-info mb-3 hidden">
+      <div class="row"><span>Transférer vers MVola IMGAM</span><strong>034 16 948 39</strong></div>
+      <div class="row"><span>Bénéficiaire</span><strong>HARIJEAN / IMGAM</strong></div>
+      <div class="row"><span>Montant requis</span><strong id="montant-interop">0 Ar</strong></div>
+      <p class="compact-details mt-2">Saisissez les données de votre reçu (montant hors frais). Une confirmation administrative est nécessaire avant l'envoi des accès.</p>
+    </div>
+    <!-- Le panneau ci-dessous est intégré à l'étape 2 et non une troisième page. -->
+    <div id="step3" class="payment-verification-panel">
+      <h3 class="sec-title" id="step3-title"><span class="ic">🔑</span> Référence MVola</h3>
+      <div id="mvola-reference-panel">
+        <label class="imgam-label" for="ref-paiement">Référence(s) de votre paiement</label>
+        <input id="ref-paiement" type="text" inputmode="text" autocomplete="off" class="imgam-field font-mono text-center" placeholder="Référence ou références séparées par une virgule">
       </div>
+      <div id="interop-transactions-panel" class="hidden">
+        <p class="compact-details mb-3">Les données du reçu servent au rapprochement avec la notification MVola. Conservez la preuve de transfert.</p>
+        <div id="interop-rows" class="space-y-3"></div>
+        <button type="button" id="add-interop-row" class="btn btn-ghost w-full mt-3">＋ Ajouter un dépôt</button>
+        <p class="compact-details mt-2">Jusqu'à 5 dépôts ; les opérateurs peuvent être différents.</p>
+      </div>
+      <button id="btn-verifier" type="button" class="btn btn-success w-full mt-3">Vérifier mon paiement</button>
+      <div id="paiement-status" class="text-sm" role="status" aria-live="polite"></div>
+      <button type="button" class="btn btn-ghost w-full mt-2" onclick="goToStep(1)">← Modifier mes cours</button>
     </div>
-    <div id="payment-info-mvola" class="payment-info payment-info--mvola mb-5">
-      <h3 class="font-bold text-emerald-800 text-sm mb-2 flex items-center gap-2">📲 Paiement MVola direct</h3>
-      <div class="row"><span class="text-slate-600">Numéro MVola :</span> <strong class="text-emerald-900 tracking-wide">034 16 948 39</strong></div>
-      <div class="row"><span class="text-slate-600">Bénéficiaire :</span> <strong class="text-emerald-900">IMGAM</strong></div>
-      <div class="row"><span class="text-slate-600">Tarif :</span> <strong class="text-emerald-900">6 500 Ar / cours</strong></div>
-      <div class="row"><span class="text-slate-600">Montant exact :</span> <strong class="text-emerald-900 text-base" id="montant-exact">0 Ar</strong></div>
-      <p class="mt-3 text-xs text-emerald-900 bg-white/70 border border-emerald-100 rounded-lg p-3">Une seule transaction MVola peut régler 1, 2 ou 3 cours. Si vous payez en plusieurs dépôts, saisissez toutes les références MVola. Maximum : 3 cours par commande.</p>
-      <div class="row"><span class="text-slate-600">Support :</span> <a href="https://wa.me/261341694839" target="_blank" class="support-link">+261 34 169 48 39</a></div>
-    </div>
-    <div id="payment-info-interop" class="payment-info mb-5 hidden">
-      <h3 class="font-bold text-orange-800 text-sm mb-2">📲 Transfert Orange Money / Airtel Money vers MVola</h3>
-      <div class="row"><span class="text-slate-600">Numéro MVola officiel IMGAM :</span> <strong class="text-orange-900">034 16 94 839</strong></div>
-      <div class="row"><span class="text-slate-600">Bénéficiaire :</span> <strong class="text-orange-900">HARIJEAN / IMGAM</strong></div>
-      <div class="row"><span class="text-slate-600">Montant à recevoir :</span> <strong class="text-orange-900" id="montant-interop">0 Ar</strong></div>
-      <p class="mt-3 text-xs text-orange-900 bg-white/70 border border-orange-100 rounded-lg p-3">Après le transfert, conservez le SMS ou reçu de votre opérateur. IMGAM comparera les informations de votre transfert avec sa notification de réception MVola, puis contrôlera votre justificatif opérateur. Saisissez le montant envoyé à IMGAM, sans ajouter les frais opérateur. Le système le comparera au montant inscrit dans la notification MVola reçue. Vous pouvez déclarer plusieurs dépôts pour compléter le paiement.</p>
-    </div>
-    <button id="btn-to-step3" class="btn btn-success w-full">J'ai effectué le paiement →</button>
-    <button class="btn btn-ghost w-full mt-2" onclick="goToStep(1)">← Modifier</button>
-  </div>
-
-  <!-- ÉTAPE 3 -->
-  <div id="step3" class="step-content">
-    <h2 class="sec-title mb-2" id="step3-title"><span class="ic">🔑</span> Saisissez la référence MVola</h2>
-    <div id="mvola-reference-panel">
-      <p class="text-sm text-slate-500 mb-5">Entrez la référence de votre dépôt. Une seule référence suffit si le dépôt couvre le total de 1, 2 ou 3 cours. Si vous avez payé en plusieurs dépôts, saisissez toutes les références séparées par une virgule.</p>
-      <div><label class="imgam-label">Référence(s) MVola</label><input type="text" id="ref-paiement" inputmode="text" autocomplete="off" placeholder="Ex. 10545684768, 10545751168" class="imgam-field font-mono text-lg text-center tracking-[.08em]"></div>
-    </div>
-    <div id="interop-transactions-panel" class="hidden">
-      <p class="text-sm text-slate-600 mb-3">Saisissez les informations figurant sur chaque reçu Orange Money ou Airtel Money. Le numéro payeur, le montant et la date/heure aideront IMGAM à retrouver la réception MVola. L'identifiant opérateur ne peut pas être confirmé automatiquement par MVola : une vérification administrative du justificatif est nécessaire avant l'envoi des accès.</p>
-      <div id="interop-rows" class="space-y-3"></div>
-      <button type="button" id="add-interop-row" class="btn btn-ghost w-full mt-3">＋ Ajouter un autre dépôt</button>
-      <p class="text-xs text-slate-500 mt-2">Maximum 5 dépôts par déclaration. Conservez vos reçus : IMGAM les vérifiera avant la validation. Si le montant est insuffisant, ajoutez le dépôt complémentaire avec les précédents.</p>
-    </div>
-    <button id="btn-verifier" class="btn btn-success w-full mt-4">Vérifier mon paiement</button>
-    <div id="paiement-status" class="mt-3 text-sm" aria-live="polite"></div>
-    <button class="btn btn-ghost w-full mt-2" onclick="goToStep(2)">← Retour</button>
   </div>
 
   <!-- ÉTAPE 4 -->
@@ -286,12 +383,10 @@
     <button onclick="location.reload()" class="btn btn-primary mx-auto px-7">Nouvelle commande</button>
   </div>
 
-  <!-- Protection des données -->
-  <div class="mt-8 pt-6 border-t border-slate-200 text-xs text-slate-500 space-y-2">
-    <p>📋 <strong class="text-slate-600">Protection de vos données</strong><br>Les informations fournies sont utilisées uniquement pour vérifier votre demande, transmettre vos accès et assurer le suivi administratif.</p>
-    <p>⏳ <strong class="text-slate-600">Durée de conservation :</strong> Pendant la durée de la formation, puis archivage légal.</p>
-    <p>📧 <strong class="text-slate-600">Contact :</strong> <a href="mailto:jakobazakasoa@gmail.com" class="text-sky-700 underline">jakobazakasoaharijean@gmail.com</a> ou <a href="https://wa.me/261341694839" target="_blank" class="text-sky-700 underline">034 16 948 39</a>.</p>
-  </div>
+  <footer class="mt-5 pt-3 border-t border-slate-200">
+    <details class="compact-details"><summary class="cursor-pointer font-medium">Protection de vos données</summary><p class="mt-2">Les données saisies servent à traiter les commandes, vérifier les paiements, transmettre les accès et effectuer le suivi administratif. Conservation : pendant la formation, puis archivage légal.</p></details>
+    <p class="compact-meta mt-2">Besoin d'aide ? <a class="support-link" href="https://wa.me/261341694839" target="_blank" rel="noopener">WhatsApp IMGAM : 034 16 948 39</a></p>
+  </footer>
 </div>
 
 <script>
@@ -364,7 +459,7 @@
     return fetch(WEB_APP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) }).then(r=>r.json());
   }
 
-  function goToStep(s) { document.querySelectorAll('.step-content').forEach(el=>el.classList.remove('active')); document.getElementById('step'+s).classList.add('active'); document.querySelectorAll('.step-dot').forEach(d=>{let n=parseInt(d.dataset.step); d.classList.remove('active','completed'); if(n===s)d.classList.add('active'); else if(n<s)d.classList.add('completed');}); }
+  function goToStep(s) { document.querySelectorAll('.step-content').forEach(el=>el.classList.remove('active')); document.getElementById('step'+s).classList.add('active'); document.querySelectorAll('.step-dot').forEach(d=>{let n=parseInt(d.dataset.step); d.classList.remove('active','completed'); if(n===s)d.classList.add('active'); else if(n<s)d.classList.add('completed');}); if(s!==1 || document.activeElement===document.getElementById('btn-to-step2')) window.scrollTo({top:0,behavior:'smooth'}); }
 
   // ============================================================
   // MATIÈRES DISPONIBLES — Grade et niveau
@@ -690,7 +785,7 @@
   function actualiserModePaiement(){
     document.getElementById('payment-info-mvola').classList.toggle('hidden', moyenPaiement !== 'mvola');
     document.getElementById('payment-info-interop').classList.toggle('hidden', moyenPaiement !== 'interop');
-    document.getElementById('step3-title').innerHTML = moyenPaiement === 'mvola' ? '<span class="ic">🔑</span> Saisissez la référence MVola' : '<span class="ic">🔎</span> Déclarez votre transfert Orange / Airtel';
+    document.getElementById('step3-title').innerHTML = moyenPaiement === 'mvola' ? '<span class="ic">🔑</span> Référence MVola' : '<span class="ic">🔎</span> Détails du transfert';
     document.getElementById('mvola-reference-panel').classList.toggle('hidden', moyenPaiement !== 'mvola');
     document.getElementById('interop-transactions-panel').classList.toggle('hidden', moyenPaiement !== 'interop');
     document.getElementById('montant-interop').textContent = document.getElementById('montant-exact').textContent;
@@ -703,19 +798,20 @@
     const row = document.createElement('div');
     row.className = 'border border-slate-200 rounded-xl p-3 bg-white';
     row.dataset.interopRow = String(idx);
-    row.innerHTML = '<div class="flex items-center justify-between mb-2"><strong class="text-sm">Dépôt '+idx+'</strong>'+(idx>1?'<button type="button" class="text-red-600 text-xs" data-remove-interop="'+idx+'">Supprimer</button>':'')+'</div>'+
-      '<label class="imgam-label">Opérateur</label><select class="imgam-field interop-operator"><option value="orange_money">Orange Money</option><option value="airtel_money">Airtel Money</option></select>'+
-      '<label class="imgam-label mt-2">Identifiant de transaction (Trans ID)</label><input class="imgam-field interop-trans-id" autocomplete="off" placeholder="Ex. c0da60d7">'+
-      '<label class="imgam-label mt-2">Numéro ayant effectué le transfert</label><input class="imgam-field interop-phone" inputmode="tel" placeholder="Ex. 0322147890">'+
-      '<label class="imgam-label mt-2">Montant du transfert (hors frais opérateur, Ar)</label><input class="imgam-field interop-amount" type="number" min="1" step="1" placeholder="Ex. 7500">'+
-      '<label class="imgam-label mt-2">Date et heure du transfert</label><input class="imgam-field interop-date" type="datetime-local" step="60">';
+    row.innerHTML = '<div class="flex items-center justify-between mb-2"><strong class="text-sm">Dépôt '+idx+'</strong>'+(idx>1?'<button type="button" class="text-red-600 text-xs" data-remove-interop="'+idx+'">Supprimer</button>':'')+'</div>'+ 
+      '<div class="interop-form-grid">'+
+        '<div><label class="imgam-label">Opérateur</label><select class="imgam-field interop-operator"><option value="orange_money">Orange Money</option><option value="airtel_money">Airtel Money</option></select></div>'+
+        '<div><label class="imgam-label">Trans ID</label><input class="imgam-field interop-trans-id" autocomplete="off" placeholder="Ex. c0da60d7"></div>'+
+        '<div><label class="imgam-label">Numéro payeur</label><input class="imgam-field interop-phone" type="tel" inputmode="tel" placeholder="03X XX XXX XX"></div>'+
+        '<div><label class="imgam-label">Montant hors frais (Ar)</label><input class="imgam-field interop-amount" type="number" min="1" step="1" placeholder="7500"></div>'+
+        '<div class="span2"><label class="imgam-label">Date et heure du transfert</label><input class="imgam-field interop-date" type="datetime-local" step="60"></div>'+
+      '</div>';
     document.getElementById('interop-rows').appendChild(row);
     row.querySelector('.interop-operator').value = operateurParDefaut;
     row.querySelector('[data-remove-interop]')?.addEventListener('click',()=>{row.remove(); document.getElementById('add-interop-row').disabled = document.querySelectorAll('#interop-rows [data-interop-row]').length >= 5;});
     document.getElementById('add-interop-row').disabled = document.querySelectorAll('#interop-rows [data-interop-row]').length >= 5;
   }
   document.getElementById('add-interop-row').addEventListener('click', ajouterLigneInterop);
-  document.getElementById('btn-to-step3').addEventListener('click', ()=>{ actualiserModePaiement(); goToStep(3); });
 
   document.getElementById('btn-verifier').addEventListener('click', function(){
     const statusEl = document.getElementById('paiement-status');

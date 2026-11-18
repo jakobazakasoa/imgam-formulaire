@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IMGAM — Commandes</title>
+  <title>IMGAM — Commandes et paiements v29.2</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -170,7 +170,7 @@
     <p class="text-sm text-slate-600 mt-2">Déjà payé ? Retrouvez votre commande sans nouveau paiement.</p>
     <label class="imgam-label mt-3" for="rec-mat">N° Matricule</label><input id="rec-mat" class="imgam-field" autocomplete="off">
     <label class="imgam-label mt-3" for="rec-email">Email initial de la commande</label><input id="rec-email" type="email" class="imgam-field">
-    <label class="imgam-label mt-3" for="rec-ref">Référence(s) MVola (toutes les références du paiement)</label><input id="rec-ref" class="imgam-field" autocomplete="off">
+    <label class="imgam-label mt-3" for="rec-ref">Référence(s) MVola ou Trans ID Orange/Airtel</label><input id="rec-ref" class="imgam-field" autocomplete="off" placeholder="Référence MVola ou Trans ID opérateur">
     <button type="button" id="rec-search" class="btn btn-primary w-full mt-3">Retrouver ma commande</button>
     <div id="rec-result" class="mt-3 text-sm" aria-live="polite"></div>
     <button type="button" id="rec-send" class="btn btn-success w-full mt-3 hidden">Renvoyer mes accès par email</button>
@@ -231,17 +231,29 @@
   <div id="step2" class="step-content">
     <h2 class="sec-title mb-4"><span class="ic">💳</span> Récapitulatif et paiement</h2>
     <div id="recap-content" class="payment-info mb-4"></div>
-    <div class="payment-info payment-info--mvola mb-5">
-      <h3 class="font-bold text-emerald-800 text-sm mb-2 flex items-center gap-2">📲 Informations de paiement MVola</h3>
+    <div class="mb-4">
+      <label class="imgam-label">Moyen de paiement</label>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2" id="payment-method-choice">
+        <label class="border border-emerald-300 bg-emerald-50 rounded-xl p-3 cursor-pointer flex items-center gap-2"><input type="radio" name="paymentMethod" value="mvola" checked><span class="font-semibold text-sm">MVola direct</span></label>
+        <label class="border border-slate-200 rounded-xl p-3 cursor-pointer flex items-center gap-2"><input type="radio" name="paymentMethod" value="orange_money"><span class="font-semibold text-sm">Orange Money</span></label>
+        <label class="border border-slate-200 rounded-xl p-3 cursor-pointer flex items-center gap-2"><input type="radio" name="paymentMethod" value="airtel_money"><span class="font-semibold text-sm">Airtel Money</span></label>
+      </div>
+    </div>
+    <div id="payment-info-mvola" class="payment-info payment-info--mvola mb-5">
+      <h3 class="font-bold text-emerald-800 text-sm mb-2 flex items-center gap-2">📲 Paiement MVola direct</h3>
       <div class="row"><span class="text-slate-600">Numéro MVola :</span> <strong class="text-emerald-900 tracking-wide">034 16 948 39</strong></div>
       <div class="row"><span class="text-slate-600">Bénéficiaire :</span> <strong class="text-emerald-900">IMGAM</strong></div>
       <div class="row"><span class="text-slate-600">Tarif :</span> <strong class="text-emerald-900">6 500 Ar / cours</strong></div>
       <div class="row"><span class="text-slate-600">Montant exact :</span> <strong class="text-emerald-900 text-base" id="montant-exact">0 Ar</strong></div>
-      <p class="mt-3 text-xs text-emerald-900 bg-white/70 border border-emerald-100 rounded-lg p-3">
-        Une seule transaction MVola peut régler 1, 2 ou 3 cours, si son montant couvre le total affiché. Si vous payez en plusieurs dépôts, saisissez toutes les références. Maximum : 3 cours par commande.
-      </p>
-      <div class="row"><span class="text-slate-600">Délai de traitement :</span> <strong class="text-emerald-900">Moins de 5 minutes</strong></div>
+      <p class="mt-3 text-xs text-emerald-900 bg-white/70 border border-emerald-100 rounded-lg p-3">Une seule transaction MVola peut régler 1, 2 ou 3 cours. Si vous payez en plusieurs dépôts, saisissez toutes les références MVola. Maximum : 3 cours par commande.</p>
       <div class="row"><span class="text-slate-600">Support :</span> <a href="https://wa.me/261341694839" target="_blank" class="support-link">+261 34 169 48 39</a></div>
+    </div>
+    <div id="payment-info-interop" class="payment-info mb-5 hidden">
+      <h3 class="font-bold text-orange-800 text-sm mb-2">📲 Transfert Orange Money / Airtel Money vers MVola</h3>
+      <div class="row"><span class="text-slate-600">Numéro MVola officiel IMGAM :</span> <strong class="text-orange-900">034 16 94 839</strong></div>
+      <div class="row"><span class="text-slate-600">Bénéficiaire :</span> <strong class="text-orange-900">HARIJEAN / IMGAM</strong></div>
+      <div class="row"><span class="text-slate-600">Montant à recevoir :</span> <strong class="text-orange-900" id="montant-interop">0 Ar</strong></div>
+      <p class="mt-3 text-xs text-orange-900 bg-white/70 border border-orange-100 rounded-lg p-3">Après le transfert, conservez le SMS ou reçu de votre opérateur. IMGAM comparera les informations de votre transfert avec sa notification de réception MVola, puis contrôlera votre justificatif opérateur. Saisissez le montant envoyé à IMGAM, sans ajouter les frais opérateur. Le système le comparera au montant inscrit dans la notification MVola reçue. Vous pouvez déclarer plusieurs dépôts pour compléter le paiement.</p>
     </div>
     <button id="btn-to-step3" class="btn btn-success w-full">J'ai effectué le paiement →</button>
     <button class="btn btn-ghost w-full mt-2" onclick="goToStep(1)">← Modifier</button>
@@ -249,11 +261,19 @@
 
   <!-- ÉTAPE 3 -->
   <div id="step3" class="step-content">
-    <h2 class="sec-title mb-2"><span class="ic">🔑</span> Saisissez la référence MVola</h2>
-    <p class="text-sm text-slate-500 mb-5">Entrez la référence de votre dépôt. Une seule référence suffit si le dépôt couvre le total de 1, 2 ou 3 cours. Si vous avez payé en plusieurs dépôts, saisissez toutes les références séparées par une virgule.</p>
-    <div><label class="imgam-label">Référence(s) MVola <span class="font-normal text-slate-400 tracking-normal">(une ou plusieurs, séparées par une virgule)</span></label><input type="text" id="ref-paiement" inputmode="text" autocomplete="off" placeholder="Ex. 10545684768, 10545751168" class="imgam-field font-mono text-lg text-center tracking-[.08em]"></div>
+    <h2 class="sec-title mb-2" id="step3-title"><span class="ic">🔑</span> Saisissez la référence MVola</h2>
+    <div id="mvola-reference-panel">
+      <p class="text-sm text-slate-500 mb-5">Entrez la référence de votre dépôt. Une seule référence suffit si le dépôt couvre le total de 1, 2 ou 3 cours. Si vous avez payé en plusieurs dépôts, saisissez toutes les références séparées par une virgule.</p>
+      <div><label class="imgam-label">Référence(s) MVola</label><input type="text" id="ref-paiement" inputmode="text" autocomplete="off" placeholder="Ex. 10545684768, 10545751168" class="imgam-field font-mono text-lg text-center tracking-[.08em]"></div>
+    </div>
+    <div id="interop-transactions-panel" class="hidden">
+      <p class="text-sm text-slate-600 mb-3">Saisissez les informations figurant sur chaque reçu Orange Money ou Airtel Money. Le numéro payeur, le montant et la date/heure aideront IMGAM à retrouver la réception MVola. L'identifiant opérateur ne peut pas être confirmé automatiquement par MVola : une vérification administrative du justificatif est nécessaire avant l'envoi des accès.</p>
+      <div id="interop-rows" class="space-y-3"></div>
+      <button type="button" id="add-interop-row" class="btn btn-ghost w-full mt-3">＋ Ajouter un autre dépôt</button>
+      <p class="text-xs text-slate-500 mt-2">Maximum 5 dépôts par déclaration. Conservez vos reçus : IMGAM les vérifiera avant la validation. Si le montant est insuffisant, ajoutez le dépôt complémentaire avec les précédents.</p>
+    </div>
     <button id="btn-verifier" class="btn btn-success w-full mt-4">Vérifier mon paiement</button>
-    <div id="paiement-status" class="mt-3 text-sm"></div>
+    <div id="paiement-status" class="mt-3 text-sm" aria-live="polite"></div>
     <button class="btn btn-ghost w-full mt-2" onclick="goToStep(2)">← Retour</button>
   </div>
 
@@ -279,6 +299,9 @@
   const TARIF = 6500;
   let matieresDisponibles = [], matieresSelectionnees = [], typeCommande = 'tutoriel';
   let commandeId = null; // ID retourné par le backend après création
+  let moyenPaiement = 'mvola';
+  let operateurParDefaut = 'orange_money';
+  let nombreLignesInterop = 0;
   let appConfig = {};    // paramètres (vague active, périodes) lus depuis la feuille Config
 
   // Charge la vague active + les périodes et met à jour l'affichage
@@ -656,39 +679,90 @@
       .finally(()=>{ btn.disabled=false; btn.textContent=old; });
   });
 
-  document.getElementById('btn-to-step3').addEventListener('click', ()=>goToStep(3));
+  document.querySelectorAll('input[name="paymentMethod"]').forEach(r=>r.addEventListener('change', function(){
+    moyenPaiement = this.value === 'mvola' ? 'mvola' : 'interop';
+    if(this.value === 'orange_money' || this.value === 'airtel_money') {
+      operateurParDefaut = this.value;
+      document.querySelectorAll('#interop-rows [data-interop-row]').forEach(row=>{if(!row.querySelector('.interop-trans-id').value.trim()) row.querySelector('.interop-operator').value=operateurParDefaut;});
+    }
+    actualiserModePaiement();
+  }));
+  function actualiserModePaiement(){
+    document.getElementById('payment-info-mvola').classList.toggle('hidden', moyenPaiement !== 'mvola');
+    document.getElementById('payment-info-interop').classList.toggle('hidden', moyenPaiement !== 'interop');
+    document.getElementById('step3-title').innerHTML = moyenPaiement === 'mvola' ? '<span class="ic">🔑</span> Saisissez la référence MVola' : '<span class="ic">🔎</span> Déclarez votre transfert Orange / Airtel';
+    document.getElementById('mvola-reference-panel').classList.toggle('hidden', moyenPaiement !== 'mvola');
+    document.getElementById('interop-transactions-panel').classList.toggle('hidden', moyenPaiement !== 'interop');
+    document.getElementById('montant-interop').textContent = document.getElementById('montant-exact').textContent;
+    document.getElementById('btn-verifier').textContent = moyenPaiement==='mvola' ? 'Vérifier mon paiement' : 'Soumettre mon paiement pour vérification';
+    if(moyenPaiement === 'interop' && document.querySelectorAll('#interop-rows [data-interop-row]').length === 0) ajouterLigneInterop();
+  }
+  function ajouterLigneInterop(){
+    if(document.querySelectorAll('#interop-rows [data-interop-row]').length >= 5) return;
+    const idx = ++nombreLignesInterop;
+    const row = document.createElement('div');
+    row.className = 'border border-slate-200 rounded-xl p-3 bg-white';
+    row.dataset.interopRow = String(idx);
+    row.innerHTML = '<div class="flex items-center justify-between mb-2"><strong class="text-sm">Dépôt '+idx+'</strong>'+(idx>1?'<button type="button" class="text-red-600 text-xs" data-remove-interop="'+idx+'">Supprimer</button>':'')+'</div>'+
+      '<label class="imgam-label">Opérateur</label><select class="imgam-field interop-operator"><option value="orange_money">Orange Money</option><option value="airtel_money">Airtel Money</option></select>'+
+      '<label class="imgam-label mt-2">Identifiant de transaction (Trans ID)</label><input class="imgam-field interop-trans-id" autocomplete="off" placeholder="Ex. c0da60d7">'+
+      '<label class="imgam-label mt-2">Numéro ayant effectué le transfert</label><input class="imgam-field interop-phone" inputmode="tel" placeholder="Ex. 0322147890">'+
+      '<label class="imgam-label mt-2">Montant du transfert (hors frais opérateur, Ar)</label><input class="imgam-field interop-amount" type="number" min="1" step="1" placeholder="Ex. 7500">'+
+      '<label class="imgam-label mt-2">Date et heure du transfert</label><input class="imgam-field interop-date" type="datetime-local" step="60">';
+    document.getElementById('interop-rows').appendChild(row);
+    row.querySelector('.interop-operator').value = operateurParDefaut;
+    row.querySelector('[data-remove-interop]')?.addEventListener('click',()=>{row.remove(); document.getElementById('add-interop-row').disabled = document.querySelectorAll('#interop-rows [data-interop-row]').length >= 5;});
+    document.getElementById('add-interop-row').disabled = document.querySelectorAll('#interop-rows [data-interop-row]').length >= 5;
+  }
+  document.getElementById('add-interop-row').addEventListener('click', ajouterLigneInterop);
+  document.getElementById('btn-to-step3').addEventListener('click', ()=>{ actualiserModePaiement(); goToStep(3); });
 
   document.getElementById('btn-verifier').addEventListener('click', function(){
-    const ref = document.getElementById('ref-paiement').value.trim();
     const statusEl = document.getElementById('paiement-status');
-    if(!ref){ statusEl.innerHTML='<span class="text-red-600">❌ Entrez la référence.</span>'; return; }
-    // Une ou plusieurs références numériques, séparées par virgule, espace ou point-virgule.
-    const refs = ref.split(/[\s,;]+/).filter(Boolean);
-    if(!refs.length || refs.some(r => !/^\d+$/.test(r))){ statusEl.innerHTML='<span class="text-red-600">❌ Référence invalide : saisissez des chiffres et séparez les références par une virgule.</span>'; return; }
     if(!commandeId){ statusEl.innerHTML='<span class="text-red-600">❌ Commande introuvable, recommencez.</span>'; return; }
     const btn=this; btn.disabled=true; btn.innerHTML='Vérification...';
-    apiPost({ action:'verifierPaiement', commandeId:commandeId, ref:ref })
+    let requete;
+    let refPourRecuperation = '';
+    if(moyenPaiement === 'mvola'){
+      const ref = document.getElementById('ref-paiement').value.trim();
+      if(!ref){ statusEl.innerHTML='<span class="text-red-600">❌ Entrez la référence MVola.</span>'; btn.disabled=false; btn.textContent=moyenPaiement==='mvola'?'Vérifier mon paiement':'Soumettre mon paiement pour vérification'; return; }
+      const refs = ref.split(/[\s,;]+/).filter(Boolean);
+      if(!refs.length || refs.some(r => !/^\d+$/.test(r))){ statusEl.innerHTML='<span class="text-red-600">❌ Référence invalide : saisissez des chiffres et séparez les références par une virgule.</span>'; btn.disabled=false; btn.textContent=moyenPaiement==='mvola'?'Vérifier mon paiement':'Soumettre mon paiement pour vérification'; return; }
+      requete = {action:'verifierPaiement', commandeId:commandeId, ref:ref};
+      refPourRecuperation = ref;
+    } else {
+      const rows = Array.from(document.querySelectorAll('#interop-rows [data-interop-row]'));
+      const transactions = rows.map(row=>({
+        operator:row.querySelector('.interop-operator').value,
+        transactionId:row.querySelector('.interop-trans-id').value.trim(),
+        payerPhone:row.querySelector('.interop-phone').value.trim(),
+        amount:row.querySelector('.interop-amount').value.trim(),
+        dateTime:row.querySelector('.interop-date').value
+      }));
+      if(!transactions.length || transactions.some(t=>!t.transactionId||!t.payerPhone||!t.amount||!t.dateTime)){
+        statusEl.innerHTML='<span class="text-red-600">❌ Complétez tous les champs de chaque dépôt.</span>'; btn.disabled=false; btn.textContent=moyenPaiement==='mvola'?'Vérifier mon paiement':'Soumettre mon paiement pour vérification'; return;
+      }
+      refPourRecuperation = transactions[0].transactionId; // pour récupérer une commande opérateur déjà validée
+      requete = {action:'verifierPaiementOperateur', commandeId:commandeId, transactions:transactions};
+    }
+    apiPost(requete)
       .then(d=>{
         if(d.valide){
           document.getElementById('final-commande-id').textContent = d.commandeId || commandeId;
           document.getElementById('final-livraison').textContent = d.livraison==='envoyee' ? 'Vos accès ont été envoyés par email. Vérifiez également les spams.' : (d.message || 'Paiement confirmé. Retrouvez votre commande pour vérifier ou renvoyer vos accès.');
           statusEl.innerHTML=''; goToStep(4);
-          if(d.livraison!=='envoyee') ouvrirRecuperation(document.getElementById('matricule').value,document.getElementById('email').value,ref);
+          const refRec = (d.referencesMVola && d.referencesMVola.length) ? d.referencesMVola.join(',') : refPourRecuperation;
+          if(d.livraison!=='envoyee' && refRec) ouvrirRecuperation(document.getElementById('matricule').value,document.getElementById('email').value,refRec);
         }
         else {
-          // Le serveur A RÉPONDU : la référence est réellement rejetée (erronée / déjà utilisée / montant).
-          // → message immédiat, on ne fait PAS patienter.
-          statusEl.innerHTML='<span class="text-red-600">❌ '+esc(d.message)+'</span>';
-          if(['deja_payee','commande_traitee','ref_deja_utilisee'].includes(d.statut)) ouvrirRecuperation(document.getElementById('matricule').value,document.getElementById('email').value,ref);
-          btn.disabled=false; btn.innerHTML='Vérifier mon paiement';
+          statusEl.innerHTML='<span class="'+(['rapprochement_ambigu','reception_non_trouvee','rapprochement_en_attente','verification_manuelle'].includes(d.statut)?'text-amber-700':'text-red-600')+'">'+( ['rapprochement_ambigu','reception_non_trouvee','rapprochement_en_attente','verification_manuelle'].includes(d.statut)?'⚠️ ':'❌ ')+esc(d.message||'Paiement non confirmé.')+'</span>';
+          if(['deja_payee','commande_traitee','ref_deja_utilisee'].includes(d.statut)) ouvrirRecuperation(document.getElementById('matricule').value,document.getElementById('email').value,refPourRecuperation);
         }
       })
       .catch(()=>{
-        // Aucune réponse (Apps Script / Forward SMS / Gmail injoignable) :
-        // SEUL cas où l'on invite l'étudiant à patienter puis réessayer.
-        statusEl.innerHTML='<span class="text-amber-600">⏳ Service momentanément indisponible. Patientez 1 à 2 minutes puis réessayez.</span>';
-        btn.disabled=false; btn.innerHTML='Vérifier mon paiement';
-      });
+        statusEl.innerHTML='<span class="text-amber-600">⏳ Service momentanément indisponible. Votre transfert n’est pas déclaré perdu. Patientez puis réessayez.</span>';
+      })
+      .finally(()=>{btn.disabled=false;btn.textContent=moyenPaiement==='mvola'?'Vérifier mon paiement':'Soumettre mon paiement pour vérification';});
   });
 
   let recoveryCredentials = null;
@@ -733,6 +807,7 @@
     document.querySelectorAll('input[name="typeCommande"]').forEach(r=>r.addEventListener('change', chargerMatieres));
     chargerConfig();
     chargerMatieres();
+    actualiserModePaiement();
   });
 </script>
 </body>

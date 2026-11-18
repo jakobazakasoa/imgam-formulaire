@@ -154,6 +154,7 @@
     <button class="tab" data-tab="tab-matieres" onclick="switchTab('tab-matieres')">📚 Matières disponibles</button>
     <button class="tab" data-tab="tab-parametres" onclick="switchTab('tab-parametres')">⚙️ Paramètres</button>
     <button class="tab" data-tab="tab-erreurs" onclick="switchTab('tab-erreurs')">⚠️ Erreurs</button>
+    <button class="tab" data-tab="tab-sujets" onclick="switchTab('tab-sujets')">📝 Sujets distribués</button>
   </div>
 
   <!-- Onglet Commandes -->
@@ -319,6 +320,49 @@
     </div>
   </div>
 
+  <!-- Onglet Sujets d'examen distribués (ajout indépendant) -->
+  <div id="tab-sujets" class="tab-content">
+    <div class="card">
+      <div class="stats-toolbar">
+        <div>
+          <h3 style="font-weight:800;color:#0f1a2e;">📝 Étudiants ayant obtenu leurs sujets d'examen</h3>
+          <p style="font-size:12px;color:#64748b;margin-top:3px;">Liste issue de l'historique des envois confirmés. Les renvois d'une même commande ne sont pas comptés deux fois.</p>
+        </div>
+        <button class="btn btn-primary" onclick="chargerSujetsDistribues(1)">🔄 Actualiser</button>
+      </div>
+      <div class="stats-grid" style="margin-top:12px;">
+        <div class="stat"><div class="val" id="sujets-stat-etudiants">—</div><div class="lbl">Étudiants servis</div></div>
+        <div class="stat"><div class="val" id="sujets-stat-distributions">—</div><div class="lbl">Commandes distribuées</div></div>
+        <div class="stat"><div class="val" id="sujets-stat-matieres">—</div><div class="lbl">Sujets / matières</div></div>
+      </div>
+      <div class="filters" style="margin-top:16px;">
+        <input type="text" id="sujets-search" class="search-input" placeholder="Rechercher matricule, email, WhatsApp, matière..." oninput="chargerSujetsDistribues(1)">
+        <button class="btn btn-outline" onclick="exporterSujetsCSV()">📤 Exporter CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date d'envoi</th>
+              <th>Matricule</th>
+              <th>WhatsApp</th>
+              <th>Email</th>
+              <th>Matière(s) obtenue(s)</th>
+              <th>Session</th>
+              <th>Statut</th>
+              <th>Commande</th>
+            </tr>
+          </thead>
+          <tbody id="sujets-body">
+            <tr><td colspan="8" style="text-align:center;color:#64748b;">Chargement...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="sujets-pagination" class="pagination"></div>
+      <p id="sujets-caption" style="font-size:12px;color:#64748b;margin-top:12px;"></p>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -333,6 +377,8 @@
   let sessionSelectionnee = '';
   let sessionActive = '';
   const LIMIT = 20;
+  let currentSujetsPage = 1;
+  let totalSujetsDistribues = 0;
 
   // Correspondance entre les codes internes et les intitulés affichés aux étudiants.
   // Cette liste ne modifie ni les commandes ni les paiements : elle améliore uniquement l'affichage admin.
@@ -616,6 +662,96 @@
       });
   }
 
+
+  // ============================================================
+  // SUJETS D'EXAMEN DISTRIBUÉS
+  // Lecture seule : n'altère aucune commande, aucun paiement ni envoi.
+  // ============================================================
+  function chargerSujetsDistribues(page) {
+    if (!sessionToken) return;
+    currentSujetsPage = page || currentSujetsPage || 1;
+    const recherche = (document.getElementById('sujets-search') || {}).value || '';
+    const session = sessionSelectionnee === '__ALL__' ? '__ALL__' : (sessionSelectionnee || '');
+    const tbody = document.getElementById('sujets-body');
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;">Chargement des distributions...</td></tr>';
+
+    apiGet({
+      action:'getSujetsDistribues',
+      recherche:recherche.trim(),
+      session:session,
+      page:currentSujetsPage,
+      limit:LIMIT
+    }).then(data => {
+      if (data.status === 'error' && (data.message||'').includes('Session')) { logout(); return; }
+      if (data.status !== 'ok') throw new Error(data.message || 'Erreur de lecture.');
+      const sujets = data.sujets || [];
+      totalSujetsDistribues = Number(data.total || 0);
+      document.getElementById('sujets-stat-etudiants').textContent = data.totalEtudiants || 0;
+      document.getElementById('sujets-stat-distributions').textContent = totalSujetsDistribues;
+      document.getElementById('sujets-stat-matieres').textContent = data.totalMatieres || 0;
+
+      if (!sujets.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;">Aucun sujet d’examen distribué trouvé pour ce filtre.</td></tr>';
+      } else {
+        tbody.innerHTML = sujets.map(x => {
+          const matieres = formaterMatieresPourAffichage(x.matieres || '');
+          return `<tr>
+            <td>${esc(x.date || '—')}</td>
+            <td><strong>${esc(x.matricule || '—')}</strong></td>
+            <td>${esc(x.whatsapp || '—')}</td>
+            <td>${esc(x.email || '—')}</td>
+            <td>${esc(matieres || '—')}</td>
+            <td>${esc(x.session || '—')}</td>
+            <td><span class="badge badge-envoye">${esc(x.statut || 'Envoyé')}</span></td>
+            <td>${esc(x.commandeId || 'Ancienne trace')}</td>
+          </tr>`;
+        }).join('');
+      }
+      afficherPaginationSujets(totalSujetsDistribues, currentSujetsPage);
+      document.getElementById('sujets-caption').textContent =
+        'Résultats : ' + totalSujetsDistribues + ' distribution(s) confirmée(s)' +
+        (session && session !== '__ALL__' ? ' — session ' + session : ' — toutes sessions');
+    }).catch(err => {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#b91c1c;">Impossible de charger la liste : ' + esc(err.message) + '</td></tr>';
+    });
+  }
+
+  function afficherPaginationSujets(total, page) {
+    const container = document.getElementById('sujets-pagination');
+    const pages = Math.ceil(total / LIMIT);
+    if (pages <= 1) { container.innerHTML = ''; return; }
+    let html = `<button ${page<=1?'disabled':''} data-sujets-go="${page-1}">←</button>`;
+    const start = Math.max(1, page-2), end = Math.min(pages, page+2);
+    if (start > 1) html += `<button data-sujets-go="1">1</button>` + (start>2?'<span>…</span>':'');
+    for (let i=start;i<=end;i++) html += `<button class="${i===page?'active':''}" data-sujets-go="${i}">${i}</button>`;
+    if (end < pages) html += (end<pages-1?'<span>…</span>':'') + `<button data-sujets-go="${pages}">${pages}</button>`;
+    html += `<button ${page>=pages?'disabled':''} data-sujets-go="${page+1}">→</button>`;
+    container.innerHTML = html;
+    container.querySelectorAll('button[data-sujets-go]').forEach(b => {
+      if (!b.disabled) b.addEventListener('click', () => chargerSujetsDistribues(parseInt(b.dataset.sujetsGo,10)));
+    });
+  }
+
+  function exporterSujetsCSV() {
+    if (!sessionToken) return;
+    const recherche = (document.getElementById('sujets-search') || {}).value || '';
+    const session = sessionSelectionnee === '__ALL__' ? '__ALL__' : (sessionSelectionnee || '');
+    apiGet({action:'getSujetsDistribues', recherche:recherche.trim(), session:session, page:1, limit:5000})
+      .then(data => {
+        if (data.status !== 'ok') throw new Error(data.message || 'Export impossible.');
+        const rows = data.sujets || [];
+        const headers = ['Date envoi','Matricule','WhatsApp','Email','Matières','Session','Statut','Commande'];
+        const csv = [headers].concat(rows.map(x => [
+          x.date,x.matricule,x.whatsapp,x.email,formaterMatieresPourAffichage(x.matieres),x.session,x.statut,x.commandeId
+        ])).map(row => row.map(v => '"' + String(v == null ? '' : v).replace(/"/g,'""') + '"').join(';')).join('\r\n');
+        const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'IMGAM_sujets_distribues.csv'; a.click();
+        URL.revokeObjectURL(url);
+      }).catch(err => alert(err.message || 'Erreur pendant l’export.'));
+  }
+
   // ============================================================
   // ERREURS
   // ============================================================
@@ -687,6 +823,7 @@
     document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('active');
     if (tabId === 'tab-erreurs') chargerErreurs();
     if (tabId === 'tab-parametres') chargerParametres();
+    if (tabId === 'tab-sujets') chargerSujetsDistribues(1);
   }
 
   // ============================================================
@@ -737,6 +874,8 @@
   window.chargerCommandes = chargerCommandes;
   window.changerSession = changerSession;
   window.exporterCSV = exporterCSV;
+  window.chargerSujetsDistribues = chargerSujetsDistribues;
+  window.exporterSujetsCSV = exporterSujetsCSV;
   window.enregistrerParametres = enregistrerParametres;
 </script>
 </body>

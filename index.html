@@ -377,7 +377,7 @@ button,input,select{font:inherit}
   <!-- ÉTAPE 4 -->
   <div id="step4" class="step-content text-center py-6">
     <div class="text-6xl mb-4 success-pop">🎉</div>
-    <h2 class="text-2xl font-extrabold text-emerald-700">Commande validée !</h2>
+    <h2 id="final-title" class="text-2xl font-extrabold text-emerald-700">Commande validée !</h2>
     <p id="final-livraison" class="text-slate-600 mb-5">Vos accès ont été envoyés par email.</p>
     <div class="payment-info payment-info--mvola text-left text-sm mb-5"><p><strong class="text-slate-700">N° de commande :</strong> <span id="final-commande-id" class="font-mono text-emerald-800">—</span></p></div>
     <button onclick="location.reload()" class="btn btn-primary mx-auto px-7">Nouvelle commande</button>
@@ -582,6 +582,11 @@ button,input,select{font:inherit}
 
   function chargerMatieres() {
     typeCommande = document.querySelector('input[name="typeCommande"]:checked').value;
+    // Le libellé du bouton reflète l'action réelle selon le type choisi.
+    const boutonPrincipal = document.getElementById('btn-to-step2');
+    boutonPrincipal.textContent = typeCommande === 'examen'
+      ? 'Vérifier mon accès →'
+      : 'Continuer vers le paiement →';
     afficherPeriode();
 
     // Une matière sélectionnée qui n'est pas disponible pour le nouveau type est retirée.
@@ -716,14 +721,17 @@ button,input,select{font:inherit}
     // EXAMEN : recherche automatique du tutoriel déjà payé.
     // Aucune nouvelle commande payante et aucune ressaisie de référence MVola.
     if(typeCommande === 'examen'){
-      btn.textContent = 'Recherche du paiement du tutoriel...';
+      btn.textContent = 'Vérification...';
+      statusEl.textContent = 'Vérification de votre paiement et de vos matières en cours...';
+      statusEl.className = 'mt-2 text-sm text-sky-700';
       apiPost({ action:'obtenirSujetExamen', matricule:mat, whatsapp:wa, email:em, matieres:matieres.map(codeMatiere) })
         .then(d=>{
           if(d.status === 'ok'){
             commandeId = d.commandeId;
             matieresSelectionnees = matieres;
+            document.getElementById('final-title').textContent = 'Sujet d’examen envoyé !';
             document.getElementById('final-commande-id').textContent = d.commandeId || '—';
-            document.getElementById('final-livraison').textContent='Demande enregistrée. Consultez votre email pour les accès ou contactez IMGAM si vous ne les recevez pas.';
+            document.getElementById('final-livraison').textContent = 'Vérification réussie ! Votre accès est validé. Consultez la boîte de réception de l’adresse Gmail enregistrée lors de votre paiement initial pour récupérer le sujet demandé. Pensez également à vérifier les courriers indésirables (spams).';
             goToStep(4);
           } else {
             statusEl.textContent = '❌ '+(d.message || 'Paiement du tutoriel introuvable.');
@@ -844,6 +852,7 @@ button,input,select{font:inherit}
     apiPost(requete)
       .then(d=>{
         if(d.valide){
+          document.getElementById('final-title').textContent = 'Commande validée !';
           document.getElementById('final-commande-id').textContent = d.commandeId || commandeId;
           document.getElementById('final-livraison').textContent = d.livraison==='envoyee' ? 'Vos accès ont été envoyés par email. Vérifiez également les spams.' : (d.message || 'Paiement confirmé. Retrouvez votre commande pour vérifier ou renvoyer vos accès.');
           statusEl.innerHTML=''; goToStep(4);

@@ -323,6 +323,7 @@ button,input,select{font:inherit}
     </div>
     <div id="matieres-container" class="grid grid-cols-1 gap-2 mt-2 max-h-48 overflow-y-auto p-2 rounded-xl bg-slate-50/70 border border-slate-200" aria-label="Matières proposées"><p class="text-sm text-slate-400 p-2">Sélectionnez le grade et le niveau.</p></div>
     <div id="selection-resume" class="mt-2 text-xs rounded-xl px-3 py-2 bg-sky-50 text-sky-900 border border-sky-100" style="display:none;"></div>
+    <p class="text-xs text-sky-800 mt-2" id="rappel-multi-matieres">Un seul paiement peut couvrir 1 à 3 matières. Sélectionnez TOUTES vos matières avant de payer : 1 = 6 500 Ar, 2 = 13 000 Ar, 3 = 19 500 Ar.</p>
     <div class="compact-divider"></div>
     <h3 class="text-sm font-bold mb-2">Mes coordonnées</h3>
     <div class="grid grid-cols-2 gap-2 compact-identity">
@@ -370,6 +371,7 @@ button,input,select{font:inherit}
       </div>
       <button id="btn-verifier" type="button" class="btn btn-success w-full mt-3">Vérifier mon paiement</button>
       <div id="paiement-status" class="text-sm" role="status" aria-live="polite"></div>
+      <button type="button" id="btn-corriger-matieres" class="btn btn-primary w-full mt-2 hidden">✏️ Ajouter les matières manquantes (sans repayer)</button>
       <button type="button" class="btn btn-ghost w-full mt-2" onclick="goToStep(1)">← Modifier mes cours</button>
     </div>
   </div>
@@ -689,6 +691,13 @@ button,input,select{font:inherit}
     titre.className = 'font-semibold mr-2';
     titre.textContent = 'Sélection actuelle :';
     resume.appendChild(titre);
+    if(typeCommande === 'tutoriel') {
+      const total = document.createElement('strong');
+      total.className = 'block mt-1 mb-1 text-emerald-900';
+      total.textContent = matieresSelectionnees.length + ' matière(s) · Total : ' +
+        (matieresSelectionnees.length * TARIF).toLocaleString('fr-FR') + ' Ar';
+      resume.appendChild(total);
+    }
 
     matieresSelectionnees.forEach(nom => {
       const tag = document.createElement('span');
@@ -714,6 +723,8 @@ button,input,select{font:inherit}
     const statusEl = document.getElementById('status-step1');
     if(!mat||!wa||!em||matieres.length===0){ statusEl.textContent='❌ Remplissez tous les champs et sélectionnez au moins une matière.'; statusEl.className='mt-2 text-sm text-red-600'; return; }
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ statusEl.textContent='❌ Adresse email invalide.'; statusEl.className='mt-2 text-sm text-red-600'; return; }
+    if(typeCommande === 'tutoriel' && matieres.length === 1 &&
+       !confirm('Vous avez sélectionné UNE SEULE matière pour 6 500 Ar : '+matieres[0]+'.\n\nSi vous avez payé 13 000 Ar pour deux matières, cliquez sur Annuler et ajoutez la deuxième matière avant de continuer.\n\nConfirmer UNE seule matière ?')) return;
 
     const btn = this; const old = btn.textContent; btn.disabled = true;
     statusEl.classList.add('hidden');
@@ -751,6 +762,18 @@ button,input,select{font:inherit}
     apiPost({ action:'creerCommande', matricule:mat, whatsapp:wa, email:em, matieres:matieres.map(codeMatiere), type:typeCommande })
       .then(d=>{
         if(d.status==='ok'){
+          // Relecture du panier renvoyé par Google Apps Script : évite qu'un
+          // affichage client (2 matières) masque une commande à 1 matière.
+          const attendu = matieres.map(codeMatiere).slice().sort();
+          const enregistre = Array.isArray(d.matieres) ? d.matieres.slice().sort() : null;
+          if(!enregistre || attendu.length !== enregistre.length ||
+             attendu.some((v,i)=>v!==enregistre[i]) ||
+             (Number(d.montant)!==attendu.length*TARIF && d.etat!=='deja_payee')) {
+            statusEl.textContent='❌ Les matières enregistrées ne correspondent pas exactement à votre sélection. Aucun paiement à effectuer. Actualisez la page ou contactez IMGAM.';
+            statusEl.className='mt-2 text-sm text-red-600';
+            commandeId=null;
+            return;
+          }
           commandeId = d.commandeId;
           matieresSelectionnees = matieres;
           if(d.etat === 'deja_payee'){
@@ -759,6 +782,13 @@ button,input,select{font:inherit}
             ouvrirRecuperation(mat,em,'');
             return;
           }
+          const paiementStatus = document.getElementById('paiement-status');
+          if (correctionPaiementEnCours) {
+            paiementStatus.textContent = 'Votre nouvelle commande contient ' + attendu.length + ' matière(s). Réutilisez votre référence initiale : aucun nouveau paiement.';
+            paiementStatus.className = 'text-sm text-emerald-700';
+            correctionPaiementEnCours = false;
+          } else { paiementStatus.textContent = ''; }
+          document.getElementById('btn-corriger-matieres').classList.add('hidden');
           const total = d.montant;
           let html='<h3 class="font-bold text-slate-700 text-sm mb-2">📋 Récapitulatif</h3>'
             + '<div class="row"><span>N° commande</span><strong class="font-mono">'+esc(commandeId)+'</strong></div>'
@@ -821,8 +851,17 @@ button,input,select{font:inherit}
   }
   document.getElementById('add-interop-row').addEventListener('click', ajouterLigneInterop);
 
+  let correctionPaiementEnCours = false;
+  document.getElementById('btn-corriger-matieres').addEventListener('click', function(){
+    correctionPaiementEnCours = true;
+    this.classList.add('hidden');
+    // Conserver les références et le justificatif : aucun nouveau paiement.
+    goToStep(1);
+    document.getElementById('selection-resume').scrollIntoView({behavior:'smooth',block:'center'});
+  });
   document.getElementById('btn-verifier').addEventListener('click', function(){
     const statusEl = document.getElementById('paiement-status');
+    document.getElementById('btn-corriger-matieres').classList.add('hidden');
     if(!commandeId){ statusEl.innerHTML='<span class="text-red-600">❌ Commande introuvable, recommencez.</span>'; return; }
     const btn=this; btn.disabled=true; btn.innerHTML='Vérification...';
     let requete;
@@ -860,7 +899,9 @@ button,input,select{font:inherit}
           if(d.livraison!=='envoyee' && refRec) ouvrirRecuperation(document.getElementById('matricule').value,document.getElementById('email').value,refRec);
         }
         else {
-          statusEl.innerHTML='<span class="'+(['rapprochement_ambigu','reception_non_trouvee','rapprochement_en_attente','verification_manuelle'].includes(d.statut)?'text-amber-700':'text-red-600')+'">'+( ['rapprochement_ambigu','reception_non_trouvee','rapprochement_en_attente','verification_manuelle'].includes(d.statut)?'⚠️ ':'❌ ')+esc(d.message||'Paiement non confirmé.')+'</span>';
+          const modifiable = d.statut === 'montant_superieur';
+          statusEl.innerHTML='<span class="'+(modifiable || ['rapprochement_ambigu','reception_non_trouvee','rapprochement_en_attente','verification_manuelle'].includes(d.statut)?'text-amber-700':'text-red-600')+'">'+(modifiable || ['rapprochement_ambigu','reception_non_trouvee','rapprochement_en_attente','verification_manuelle'].includes(d.statut)?'⚠️ ':'❌ ')+esc(d.message||'Paiement non confirmé.')+'</span>';
+          if(modifiable) document.getElementById('btn-corriger-matieres').classList.remove('hidden');
           if(['deja_payee','commande_traitee','ref_deja_utilisee'].includes(d.statut)) ouvrirRecuperation(document.getElementById('matricule').value,document.getElementById('email').value,refPourRecuperation);
         }
       })
